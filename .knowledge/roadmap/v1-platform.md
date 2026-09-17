@@ -1,8 +1,10 @@
 ---
+type: Roadmap
 title: V1 Platform Details
+description: "V1.0 adaptive planning, QC, recipes, resource scheduling"
 purpose: V1.0 adaptive planning, QC, recipes, resource scheduling
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - full-roadmap.md
   - v0-mvp.md

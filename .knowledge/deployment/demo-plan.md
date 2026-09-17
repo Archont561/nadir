@@ -1,8 +1,10 @@
 ---
+type: Deployment Guide
 title: Demo Plan
+description: "4-week demo — Astro + WebcoreUI + Clerk + Postgres + Drizzle + Inngest + Docker worker"
 purpose: 4-week demo — Astro + WebcoreUI + Clerk + Postgres + Drizzle + Inngest + Docker worker
 last_updated: 2025-06-20
-status: current
+status: stable
 related:
   - hosting-comparison.md
   - docker-strategy.md

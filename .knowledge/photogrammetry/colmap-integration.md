@@ -1,8 +1,10 @@
 ---
+type: Domain Guide
 title: COLMAP Integration
+description: "CLI commands, binary format, adapter code, progress parsing, resume behavior"
 purpose: CLI commands, binary format, adapter code, progress parsing, resume behavior
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - engine-assignment.md
   - openmvs-integration.md

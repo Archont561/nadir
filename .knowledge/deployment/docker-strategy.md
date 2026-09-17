@@ -1,8 +1,10 @@
 ---
+type: Deployment Guide
 title: Docker Strategy
+description: "Inverted container model, multi-stage Dockerfile, lean production variant"
 purpose: Inverted container model, multi-stage Dockerfile, lean production variant
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - hosting-comparison.md
   - pixi-setup.md

@@ -1,8 +1,10 @@
 ---
+type: Reference
 title: External Sources
+description: "All documentation links for engines, libraries, and references"
 purpose: All documentation links for engines, libraries, and references
 last_updated: 2025-02-23
-status: current
+status: stable
 ---
 
 # External Sources

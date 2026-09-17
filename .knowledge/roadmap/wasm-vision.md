@@ -1,8 +1,10 @@
 ---
+type: Roadmap
 title: WASM / Edge / Browser Vision
+description: "V2+++ pure Rust math, WASM compilation, browser/edge/serverless topologies"
 purpose: V2+++ pure Rust math, WASM compilation, browser/edge/serverless topologies
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - full-roadmap.md
   - v2-scale.md

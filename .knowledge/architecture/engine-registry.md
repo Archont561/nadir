@@ -1,8 +1,10 @@
 ---
+type: Architecture
 title: Engine Registry & Trait API
+description: "The 16 stable traits, config structs, engine resolution, and adapter pattern"
 purpose: The 16 stable traits, config structs, engine resolution, and adapter pattern
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - overview.md
   - five-domains.md

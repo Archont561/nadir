@@ -1,8 +1,10 @@
 ---
+type: Domain Guide
 title: Photogrammetry Pipeline Stages
+description: "Full walkthrough from drone images to mapping products with math and diagrams"
 purpose: Full walkthrough from drone images to mapping products with math and diagrams
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - engine-assignment.md
   - ../architecture/five-domains.md

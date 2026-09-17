@@ -1,5 +1,7 @@
 ---
+type: Architecture Decision Record
 title: "ADR-004: Inverted Container Model (No Docker-in-Docker)"
+description: "Records the accepted architecture decision on Inverted Container Model (No Docker-in-Docker)."
 status: accepted
 date: 2025-02-23
 deciders: project lead

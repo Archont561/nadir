@@ -1,8 +1,10 @@
 ---
+type: Roadmap
 title: V2 Scale Details
+description: "V2.0 native engines, splitting, worker protocol, multi-language SDK"
 purpose: V2.0 native engines, splitting, worker protocol, multi-language SDK
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - full-roadmap.md
   - v1-platform.md

@@ -1,8 +1,10 @@
 ---
+type: Architecture
 title: Artifact Model
+description: "Artifact types, content-based blake3 hashing, caching, invalidation, provenance"
 purpose: Artifact types, content-based blake3 hashing, caching, invalidation, provenance
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - overview.md
   - pipeline-dag.md

@@ -1,8 +1,10 @@
 ---
+type: Deployment Guide
 title: Hosting Comparison
+description: "Railway vs Render vs Vercel vs Fly.io vs VPS for photogrammetry workloads"
 purpose: Railway vs Render vs Vercel vs Fly.io vs VPS for photogrammetry workloads
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - docker-strategy.md
   - demo-plan.md

@@ -1,8 +1,10 @@
 ---
+type: Architecture
 title: Five Computational Domains
+description: "Detailed breakdown of Dataset, Reconstruction, Geometry, Surface, Cartography"
 purpose: Detailed breakdown of Dataset, Reconstruction, Geometry, Surface, Cartography
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - overview.md
   - engine-registry.md

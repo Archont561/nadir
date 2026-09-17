@@ -1,8 +1,10 @@
 ---
+type: Domain Guide
 title: OpenMVS Integration
+description: "Tool chain, MVS scene format, COLMAP→OpenMVS conversion, adapter code"
 purpose: Tool chain, MVS scene format, COLMAP→OpenMVS conversion, adapter code
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - colmap-integration.md
   - engine-assignment.md

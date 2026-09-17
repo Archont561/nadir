@@ -1,15 +1,17 @@
 ---
+type: Navigation Guide
 title: Nadir Knowledge Base Index
-purpose: Master map for LLM context loading — load this after CONTEXT.md
+description: "Master map for LLM context loading — load this after /context.md"
+purpose: Master map for LLM context loading — load this after /context.md
 last_updated: 2025-02-23
-status: current
+status: stable
 ---
 
 # Nadir Knowledge Base Index
 
 ## Quick Start for LLMs
 
-1. **Always load `CONTEXT.md` first.** It contains the full project summary
+1. **Always load `/context.md` first.** It contains the full project summary
    in ~2,000 tokens: architecture, stack, decisions, status, naming.
 2. **Load additional files based on the task** using the table below.
 3. **Cross-references are explicit.** Every file links to related files via
@@ -17,7 +19,7 @@ status: current
 
 ## Task-Based Loading Guide
 
-| User asks about... | Load these files (after CONTEXT.md) |
+| User asks about... | Load these files (after /context.md) |
 |---|---|
 | General project questions | Nothing more needed |
 | System architecture | `architecture/overview.md`, `architecture/five-domains.md` |
@@ -58,8 +60,8 @@ status: current
 
 | File | Description |
 |---|---|
-| [`CONTEXT.md`](./CONTEXT.md) | Project summary: architecture, stack, decisions, status, naming (~2k tokens) |
-| [`INDEX.md`](./INDEX.md) | This file. Master map with task-based loading guide |
+| [`/context.md`](.//context.md) | Project summary: architecture, stack, decisions, status, naming (~2k tokens) |
+| [`/index.md`](.//index.md) | This file. Master map with task-based loading guide |
 
 ### Decisions — Architectural Decision Records (8 files)
 
@@ -139,12 +141,12 @@ status: current
 1. **Update after every significant conversation.** Merge new decisions and
    specs into the relevant files. Do not let knowledge live only in chat history.
 2. **One decision per ADR.** Do not bundle unrelated decisions into one file.
-3. **Keep `CONTEXT.md` under 2,500 tokens.** It is the hot path for every session.
+3. **Keep `/context.md` under 2,500 tokens.** It is the hot path for every session.
 4. **Cross-reference explicitly.** Use relative markdown paths, not "as we
    discussed earlier." LLMs have no memory between sessions.
 5. **Include code examples in implementation files.** LLMs generate better code
    when they can see the target types and signatures.
 6. **Mark status in YAML frontmatter.** Use `current`, `draft`, `superseded`
    for specs. Use `accepted`, `proposed`, `deprecated` for decisions.
-7. **Re-run Batch 1 after major changes.** `CONTEXT.md` and `INDEX.md` should
+7. **Re-run Batch 1 after major changes.** `/context.md` and `/index.md` should
    always reflect the current state of all other files.

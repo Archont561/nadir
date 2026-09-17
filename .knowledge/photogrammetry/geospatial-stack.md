@@ -1,8 +1,10 @@
 ---
+type: Domain Guide
 title: Geospatial Stack
+description: "GDAL, PROJ, PDAL, nalgebra, geo — what each does, Rust bindings, usage patterns"
 purpose: GDAL, PROJ, PDAL, nalgebra, geo — what each does, Rust bindings, usage patterns
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - engine-assignment.md
   - ../architecture/five-domains.md
