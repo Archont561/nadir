@@ -1,5 +1,7 @@
 ---
+type: Architecture Decision Record
 title: "ADR-006: Pixi for Dependency Management"
+description: "Records the accepted architecture decision on Pixi for Dependency Management."
 status: accepted
 date: 2025-02-23
 deciders: project lead

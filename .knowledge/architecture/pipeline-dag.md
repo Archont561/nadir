@@ -1,8 +1,10 @@
 ---
+type: Architecture
 title: Pipeline & DAG Executor
+description: "Declarative TOML pipelines, petgraph DAG, topological executor, concurrent branches"
 purpose: Declarative TOML pipelines, petgraph DAG, topological executor, concurrent branches
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - overview.md
   - artifact-model.md

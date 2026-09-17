@@ -1,5 +1,7 @@
 ---
+type: Architecture Decision Record
 title: "ADR-001: Step-Scoped Tools vs ODM Monolith"
+description: "Records the accepted architecture decision on Step-Scoped Tools vs ODM Monolith."
 status: accepted
 date: 2025-02-23
 deciders: project lead

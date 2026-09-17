@@ -1,10 +1,12 @@
 ---
+type: Architecture
 title: Architecture Overview
+description: "Big-picture system design — 5 domains, 3 dependency tiers, build system metaphor"
 purpose: Big-picture system design — 5 domains, 3 dependency tiers, build system metaphor
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
-  - ../CONTEXT.md
+  - /context.md
   - five-domains.md
   - engine-registry.md
   - pipeline-dag.md

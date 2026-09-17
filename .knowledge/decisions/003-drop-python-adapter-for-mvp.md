@@ -1,5 +1,7 @@
 ---
+type: Architecture Decision Record
 title: "ADR-003: Drop Python Adapter for MVP"
+description: "Records the accepted architecture decision on Drop Python Adapter for MVP."
 status: accepted
 date: 2025-02-23
 deciders: project lead

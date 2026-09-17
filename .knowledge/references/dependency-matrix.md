@@ -1,8 +1,10 @@
 ---
+type: Reference
 title: Dependency Matrix
+description: "All Rust crates and external tools with versions, tiers, and WASM status"
 purpose: All Rust crates and external tools with versions, tiers, and WASM status
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - sources.md
   - ../decisions/006-pixi-for-dependency-management.md

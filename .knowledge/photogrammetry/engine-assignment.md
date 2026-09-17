@@ -1,8 +1,10 @@
 ---
+type: Domain Guide
 title: Engine Assignment
+description: "Which tool handles which stage, why, and the V0→V3 replacement path"
 purpose: Which tool handles which stage, why, and the V0→V3 replacement path
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - pipeline-stages.md
   - geospatial-stack.md

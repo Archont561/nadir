@@ -1,8 +1,10 @@
 ---
+type: Deployment Guide
 title: Pixi Setup
+description: "Full pixi.toml, environments, developer onboarding, Docker integration, CI"
 purpose: Full pixi.toml, environments, developer onboarding, Docker integration, CI
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - docker-strategy.md
   - ../decisions/006-pixi-for-dependency-management.md

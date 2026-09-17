@@ -1,5 +1,7 @@
 ---
+type: Architecture Decision Record
 title: "ADR-002: Three-Language Split"
+description: "Records the accepted architecture decision on Three-Language Split."
 status: accepted
 date: 2025-02-23
 deciders: project lead

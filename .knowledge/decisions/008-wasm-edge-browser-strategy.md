@@ -1,5 +1,7 @@
 ---
+type: Architecture Decision Record
 title: "ADR-008: WASM / Edge / Browser Strategy"
+description: "Records the accepted architecture decision on WASM / Edge / Browser Strategy."
 status: accepted
 date: 2025-02-23
 deciders: project lead

@@ -1,5 +1,7 @@
 ---
+type: Architecture Decision Record
 title: "ADR-007: Engine Trait API Surface"
+description: "Records the accepted architecture decision on Engine Trait API Surface."
 status: accepted
 date: 2025-02-23
 deciders: project lead

@@ -1,8 +1,10 @@
 ---
+type: Roadmap
 title: V0 MVP Details
+description: "V0.1 and V0.2 milestones, deliverables, CLI output examples"
 purpose: V0.1 and V0.2 milestones, deliverables, CLI output examples
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - full-roadmap.md
   - ../deployment/demo-plan.md

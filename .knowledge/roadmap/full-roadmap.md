@@ -1,8 +1,10 @@
 ---
+type: Roadmap
 title: Full Roadmap
+description: "V0.1 → V3.0 complete checklist, dependency matrix, three rules"
 purpose: V0.1 → V3.0 complete checklist, dependency matrix, three rules
 last_updated: 2025-02-23
-status: current
+status: stable
 related:
   - v0-mvp.md
   - v1-platform.md

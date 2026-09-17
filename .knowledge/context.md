@@ -1,9 +1,11 @@
 ---
+type: Project Context
 title: Nadir Project Context
+description: "Single-file project summary for LLM quick-loading"
 purpose: Single-file project summary for LLM quick-loading
 tokens: ~2000
 last_updated: 2025-02-23
-status: current
+status: stable
 ---
 
 # Nadir — Project Context
@@ -112,8 +114,8 @@ aerial image.
 
 ## File Navigation
 
-- **Start here:** This file (`CONTEXT.md`)
-- **Full map:** `INDEX.md`
+- **Start here:** This file (`/context.md`)
+- **Full map:** `/index.md`
 - **Why we decided X:** `decisions/*.md`
 - **System design:** `architecture/*.md`
 - **Photogrammetry domain:** `photogrammetry/*.md`

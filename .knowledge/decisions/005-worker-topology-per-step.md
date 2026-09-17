@@ -1,5 +1,7 @@
 ---
+type: Architecture Decision Record
 title: "ADR-005: Per-Step Worker Topology"
+description: "Records the accepted architecture decision on Per-Step Worker Topology."
 status: accepted
 date: 2025-02-23
 deciders: project lead
