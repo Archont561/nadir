@@ -42,6 +42,11 @@ status: stable
 | Hosting / PaaS comparison | `deployment/hosting-comparison.md` |
 | Pixi / dev environment / CI | `deployment/pixi-setup.md` |
 | Demo plan / 4-week sprint | `deployment/demo-plan.md` |
+| The SaaS on top of Nadir (NadrScan) | `saas/context.md`, `saas/architecture.md` |
+| SaaS ↔ Nadir integration | `saas/integration-bridge.md`, `saas/pipeline-workflow.md` |
+| SaaS upload / progress / viewers | `saas/upload-flow.md`, `saas/progress-channel.md`, `saas/viewers.md` |
+| SaaS billing / credits / auth | `saas/billing.md`, `saas/data-model.md`, `saas/auth.md` |
+| SaaS infrastructure / deployment | `saas/infrastructure.md`, `saas/deployment-topology.md` |
 | Full roadmap | `roadmap/full-roadmap.md` |
 | V0 MVP details | `roadmap/v0-mvp.md` |
 | V1 platform details | `roadmap/v1-platform.md` |
@@ -107,6 +112,24 @@ status: stable
 | [`implementation/config-model.md`](./implementation/config-model.md) | Layered config precedence (defaults → system → project → mission → env → CLI), `serde`/`figment`, `NadirConfig` struct, per-domain config structs |
 | [`implementation/qc-and-adaptive.md`](./implementation/qc-and-adaptive.md) | Preflight inspector (GSD, overlap, GPS), QC gates (reprojection RMSE, coverage), adaptive planner (matching strategy by image count), product recipes, DAG pruning |
 | [`implementation/cli-design.md`](./implementation/cli-design.md) | CLI commands (`process`, `inspect`, `plan`, `serve`, `resume`, `explain`, `report`), `--serve` mode for worker, JSON output, UX patterns |
+
+### SaaS — NadrScan Application (13 files)
+
+| File | Description |
+|---|---|
+| [`saas/context.md`](./saas/context.md) | NadrScan SaaS hot-path summary: SvelteKit + Nadir, 5 core decisions, 3 rules, cost envelope, monorepo placement |
+| [`saas/architecture.md`](./saas/architecture.md) | System design: product, Lintel → SvelteKit primitive mapping, rendering tiers, 5 cache layers, user journey → routes, phased build plan |
+| [`saas/data-flow.md`](./saas/data-flow.md) | Reads / writes / streams / compute mapped to SvelteKit, with dashboard, upload, processing, viewing, and SSE lifecycles |
+| [`saas/integration-bridge.md`](./saas/integration-bridge.md) | The `services/nadir.ts` client: transport tiers, submit/poll/cancel, artifact handoff, error mapping |
+| [`saas/pipeline-workflow.md`](./saas/pipeline-workflow.md) | The 16-stage workflow as a gateway orchestrator: DAG, ProcessingBag, step contracts, post-processing, variants, error compensation |
+| [`saas/data-model.md`](./saas/data-model.md) | Six Drizzle tables, index strategy, size estimates, PostGIS spatial query catalog, credit ledger operations |
+| [`saas/auth.md`](./saas/auth.md) | Clerk in SvelteKit: hooks JWT verification, Svix webhook, provisioning chain, client components |
+| [`saas/upload-flow.md`](./saas/upload-flow.md) | UploadZone component, validation rules, EXIF GPS preview, presigned parallel uploads to R2 |
+| [`saas/progress-channel.md`](./saas/progress-channel.md) | SSE via `+server.ts`, channel payloads, 13-stage timeline, reconnection + snapshot catch-up |
+| [`saas/viewers.md`](./saas/viewers.md) | MapLibre + PMTiles map, Potree point cloud, Three.js mesh — lazy-loaded browser-only components |
+| [`saas/infrastructure.md`](./saas/infrastructure.md) | R2, Neon, RunPod, Resend, Grafana, TiTiler, tus: rationale, config, env var catalog, demo-mode fallbacks |
+| [`saas/billing.md`](./saas/billing.md) | Hybrid subscription + credits, plans, Stripe flows + idempotency, refunds, reconciliation, cost envelope, scaling tiers |
+| [`saas/deployment-topology.md`](./saas/deployment-topology.md) | Three-zone model, one-image-two-entrypoints SvelteKit build, Nadir GPU image, MVP deployment, scaling path |
 
 ### Deployment — How to Run It (4 files)
 

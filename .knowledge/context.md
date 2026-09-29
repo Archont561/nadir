@@ -22,6 +22,11 @@ The name comes from the **nadir point** — the point on the ground directly
 beneath the camera. It is the fundamental ground-truth reference in every
 aerial image.
 
+On top of the engine sits **NadrScan**, the photogrammetry SaaS: a SvelteKit
+gateway at `apps/nadirscan` (ADR-009) that handles uploads, billing, progress
+streaming, and result viewing, with Nadir workers doing the GPU compute.
+The SaaS has its own knowledge section — see [`saas/context.md`](saas/context.md).
+
 ## Core Architectural Principles
 
 1. **Build system metaphor, not job queue.** Tasks produce artifacts from
@@ -118,6 +123,7 @@ aerial image.
 - **Full map:** `/index.md`
 - **Why we decided X:** `decisions/*.md`
 - **System design:** `architecture/*.md`
+- **The SaaS on top of Nadir (NadrScan):** `saas/*.md`
 - **Photogrammetry domain:** `photogrammetry/*.md`
 - **How to build it:** `implementation/*.md`
 - **How to run it:** `deployment/*.md`

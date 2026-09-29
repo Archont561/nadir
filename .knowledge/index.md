@@ -30,10 +30,29 @@ Portable project knowledge for Nadir, organized for progressive disclosure.
 * [ADR-006: Pixi for Dependency Management](decisions/006-pixi-for-dependency-management.md) - Records the accepted architecture decision on Pixi for Dependency Management.
 * [ADR-007: Engine Trait API Surface](decisions/007-engine-trait-api-surface.md) - Records the accepted architecture decision on Engine Trait API Surface.
 * [ADR-008: WASM / Edge / Browser Strategy](decisions/008-wasm-edge-browser-strategy.md) - Records the accepted architecture decision on WASM / Edge / Browser Strategy.
+* [ADR-009: SvelteKit Gateway for NadrScan (apps/nadirscan)](decisions/009-sveltekit-gateway-for-nadrscan.md) - Records the accepted architecture decision to build the NadrScan SaaS gateway as apps/nadirscan with SvelteKit, superseding the Lintel BFF (NadirScan bundle) and the Astro demo stack.
+
+## SaaS — NadrScan Application
+
+The photogrammetry SaaS built on top of the Nadir engine — SvelteKit gateway at `apps/nadirscan` (ADR-009). Ported from the external NadirScan knowledge bundle (Archont561/NadirScan, OKF v0.2) and adapted from a Lintel BFF gateway to SvelteKit.
+
+* [NadrScan SaaS — Project Context](saas/context.md) - One-page summary: SvelteKit + Nadir, the five core decisions, the three rules, cost envelope, monorepo placement
+* [SaaS Architecture — SvelteKit + Nadir](saas/architecture.md) - Product definition, Lintel → SvelteKit primitive mapping, rendering strategy, cache layers, user journey → route map, phased build plan
+* [SaaS Data Flow — Reads, Writes, Streams, Compute](saas/data-flow.md) - The four data movements mapped to SvelteKit, with lifecycles for dashboard, upload, processing, viewing, and SSE
+* [Integration Bridge — SvelteKit ↔ Nadir](saas/integration-bridge.md) - The `services/nadir.ts` client, transport tiers, job submission, progress, artifact handoff, cancellation, error mapping
+* [Photogrammetry Pipeline — 16-Stage Workflow](saas/pipeline-workflow.md) - Gateway-side orchestrator, ProcessingBag, step contracts, post-processing commands, pipeline variants, error compensation
+* [SaaS Data Model — Six Tables, PostGIS, Credit Ledger](saas/data-model.md) - Drizzle schema, index strategy, size estimates, the PostGIS spatial query catalog, and ledger operations
+* [Auth — Clerk in SvelteKit](saas/auth.md) - hooks.server.ts JWT verification, the provisioning webhook, the Clerk → Neon → Stripe → Resend chain, client components
+* [Upload Flow — Drag-Drop to R2](saas/upload-flow.md) - The UploadZone component, client-side validation, EXIF GPS preview, presigned parallel uploads straight to R2
+* [Progress Channel — Real-Time Processing Updates](saas/progress-channel.md) - SSE via +server.ts, channel payloads, the 13-stage timeline component, reconnection with snapshot catch-up
+* [Viewers — MapLibre + PMTiles, Potree, Three.js](saas/viewers.md) - The three lazy-loaded result viewers (orthomosaic map, point cloud, textured mesh) as Svelte components
+* [Infrastructure — R2, Neon, RunPod, Resend, Grafana, TiTiler, tus](saas/infrastructure.md) - Service-by-service catalog, env var table, dependency graph, demo-mode fallbacks
+* [Billing — Stripe, Credits, and Cost Envelope](saas/billing.md) - Hybrid subscription + credits model, webhook idempotency, refunds, reconciliation, MVP cost envelope, scaling tiers
+* [Deployment Topology — Edge, Gateway, Workers](saas/deployment-topology.md) - Three-zone model, one-image-two-entrypoints SvelteKit build, the Nadir GPU image, MVP deployment, scaling path
 
 ## Deployment
 
-* [Demo Plan](deployment/demo-plan.md) - 4-week demo — Astro + WebcoreUI + Clerk + Postgres + Drizzle + Inngest + Docker worker
+* [Demo Plan](deployment/demo-plan.md) - 4-week demo — Astro + WebcoreUI + Clerk + Postgres + Drizzle + Inngest + Docker worker (**UI stack superseded by ADR-009**)
 * [Docker Strategy](deployment/docker-strategy.md) - Inverted container model, multi-stage Dockerfile, lean production variant
 * [Hosting Comparison](deployment/hosting-comparison.md) - Railway vs Render vs Vercel vs Fly.io vs VPS for photogrammetry workloads
 * [Pixi Setup](deployment/pixi-setup.md) - Full pixi.toml, environments, developer onboarding, Docker integration, CI

@@ -1,18 +1,26 @@
 ---
 type: Deployment Guide
 title: Demo Plan
-description: "4-week demo — Astro + WebcoreUI + Clerk + Postgres + Drizzle + Inngest + Docker worker"
+description: "4-week demo — Astro + WebcoreUI + Clerk + Postgres + Drizzle + Inngest + Docker worker (UI stack superseded by ADR-009)"
 purpose: 4-week demo — Astro + WebcoreUI + Clerk + Postgres + Drizzle + Inngest + Docker worker
-last_updated: 2025-06-20
-status: stable
+last_updated: 2026-09-30
+status: superseded
 related:
   - hosting-comparison.md
   - docker-strategy.md
   - ../roadmap/v0-mvp.md
   - ../decisions/004-inverted-container-no-dind.md
+  - ../decisions/009-sveltekit-gateway-for-nadrscan.md
 ---
 
 # Demo Plan
+
+> **Superseded (2026-09-30):** the UI/BFF stack in this plan (Astro +
+> WebcoreUI) is replaced by
+> [ADR-009](../decisions/009-sveltekit-gateway-for-nadrscan.md) — the SaaS is
+> `apps/nadirscan` built with SvelteKit. The Clerk auth, Postgres + Drizzle,
+> and Docker-worker parts carry over; the current SaaS design lives in
+> [`../saas/`](../saas/context.md).
 
 ## TL;DR
 
