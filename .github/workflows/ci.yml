@@ -65,9 +65,10 @@ jobs:
       # `--locked`, not a bare `pixi install`. A CI run that re-solves produces a different
       # environment from the one that was committed, which means a green run says nothing
       # about the lockfile. This step failing is the correct outcome for a manifest edited
-      # without its lock. (`--locked` and `--frozen` are mutually exclusive: `--frozen`
-      # would install the lockfile *without* checking it against the manifest, which is the
-      # opposite of what is wanted here.)
+      # without its lock. Not `--frozen`: pixi accepts it alongside `--locked`, but it
+      # installs the lockfile *without* checking it against the manifest, which is the
+      # check this step exists to perform. (`--frozen-lockfile` is npm's spelling and is
+      # not a pixi flag at all — it is what this workflow used to pass.)
       - name: Install the environment
         run: pixi install --locked -e default
 
