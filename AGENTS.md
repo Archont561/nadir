@@ -38,7 +38,10 @@ manager and the test runner.
 | --- | --- | --- |
 | `pixi.toml` | every system dependency, and the task graph | nothing per-language |
 | `Cargo.toml` | the Rust workspace, and the `nadir-cli` package | JavaScript or Python config |
-| `package.json` | the Bun workspace, and the `all:*` turbo entry points | tool versions |
+| `package.json` | the Bun workspace, the `all:*` turbo entry points, and the repo-wide agent tooling (`backlog.md`, `skills`) | tool versions |
+| `.agents/skills/` | the agent skills, checked in | their provenance |
+| `skills-lock.json` | where each skill came from, and its hash | the skill text |
+| `backlog/` | the project's work, as Markdown tasks | anything the CLI can write |
 | `turbo.json` | task ordering and caching | task commands |
 | `crates/*/package.json` | the cargo commands, as a turbo facade | cargo configuration |
 | `python/nadir/package.json` | the pytest/ruff commands, as a turbo facade | python dependencies |
@@ -100,6 +103,44 @@ it. Nothing else. There is no workspace registration step; that is what the glob
 Create the directory, a `package.json` with the task scripts from `crates/package.json` or
 `python/nadir/package.json`, and let the `packages/*` or `python/*` glob pick it up. Add
 `turbo run <task>` in the root `all:*` script only if the task is new to the repository.
+
+## Agent tooling: skills and the backlog
+
+Two npm tools, both root devDependencies rather than conda packages, both reached through
+a pixi task:
+
+```sh
+pixi run skills                 # = bun x skills
+pixi run backlog task list --plain
+```
+
+`bun x`, not `bunx`: the conda-forge `bun` package ships no `bunx` shim. And not
+`node_modules/.bin/backlog` either — both binaries carry a `#!/usr/bin/env node` shebang
+and no environment here provides node (ADR-010), so a direct call fails with
+`env: node: No such file or directory`. That is the shebang, not a broken install.
+
+**Skills** live in `.agents/skills/`, checked in, with their origin and content hash in
+`skills-lock.json`. They are vendored on purpose: a skill that resolves over the network
+is a different skill on a machine with no network, and this repository ships an offline
+sandbox. `pixi run skills list` shows what is installed; `pixi run skills update` refreshes
+a vendored copy and rewrites the lock, which is a reviewable diff.
+
+**Work is Markdown**, under `backlog/`, versioned with the code — task state is a git
+commit, not a row in someone else's database. The conventions:
+
+| Thing | Value |
+| --- | --- |
+| Task prefix | `nd` (`backlog/config.yml`) |
+| Milestones | `backlog/milestones/`, `m-0` is V0.1 |
+| Statuses | `To Do`, `In Progress`, `Done` |
+| Labels | the crate or domain (`artifacts`, `reconstruction`, `cli`), plus the milestone (`v0.1`) |
+
+Drive it with the CLI, not an editor: `task create`, `task edit --check-ac`, `task
+complete`. Hand-editing the front matter is how IDs, dependency links and AC numbering
+drift. Every read needs `--plain` (or `--json` to parse) — the bare commands open an
+interactive TUI that never returns in a non-interactive shell, and `backlog board` and
+`backlog browser` block outright. The full workflow is the `backlog` skill in
+`.agents/skills/backlog/`.
 
 ## Commit messages
 

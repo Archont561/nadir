@@ -407,6 +407,26 @@ changelog-preview = { cmd = "convco changelog", description = "Print the changel
 # is called by `gates` directly rather than through turbo.
 lint-actions = { cmd = "actionlint", description = "Lint the GitHub Actions workflows" }
 
+# ── agent tooling (root bun workspace) ─────────────────────────────────────────
+# `backlog.md` and `skills` are root devDependencies, not conda packages: they are npm
+# tools on the npm release cadence, and ADR-010 keeps that side of the repository in
+# `bun.lock`.
+#
+# `bun x`, not `bunx`: the conda-forge `bun` package ships no `bunx` shim, so the
+# subcommand form is the only one that resolves here. It prefers the workspace install
+# over the registry, so the committed lockfile still pins what these tasks run.
+#
+# They have to go through bun at all because both binaries carry a `#!/usr/bin/env node`
+# shebang and no environment here provides node (ADR-010). A bare
+# `node_modules/.bin/backlog` fails with `env: node: No such file or directory`; that is
+# the shebang, not a broken install.
+backlog = { cmd = "bun x backlog", depends-on = [
+  "bun-install",
+], description = "Manage the Markdown project backlog under backlog/" }
+skills = { cmd = "bun x skills", depends-on = [
+  "bun-install",
+], description = "Manage the agent skills under .agents/skills, recorded in skills-lock.json" }
+
 # ── sandbox transport (pixi-sandbox) ───────────────────────────────────────────
 # pack -> doctor -> publish, locally. `pixi-sandbox` is not a conda dependency; it is a
 # static release binary, installed by the checksum-verified one-liner in its README.
