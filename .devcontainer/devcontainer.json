@@ -1,0 +1,58 @@
+{
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.json",
+  "name": "nadir",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    }
+  },
+
+  "onCreateCommand": "pixi install --locked && pixi run setup",
+
+  "postCreateCommand": "pixi run post-create",
+
+  "postStartCommand": "echo 'nadir: run `pixi run gates` before pushing'",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "tamasfe.even-better-toml",
+        "rust-lang.rust-analyzer",
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "biomejs.biome"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.pixi/envs/default/bin/python",
+        "rust-analyzer.cargo.buildScripts.enable": true,
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true
+        },
+        "[rust]": {
+          "editor.defaultFormatter": "rust-lang.rust-analyzer"
+        }
+      }
+    }
+  },
+
+  "remoteEnv": {
+    "PIXI_PROJECT_MANIFEST": "${containerWorkspaceFolder}/pixi.toml"
+  },
+
+  "mounts": [
+    {
+      "source": "nadir-pixi-cache",
+      "target": "${containerWorkspaceFolder}/.pixi/cache",
+      "type": "volume"
+    },
+    {
+      "source": "nadir-cargo-registry",
+      "target": "${containerEnv:HOME}/.cargo",
+      "type": "volume"
+    }
+  ]
+}

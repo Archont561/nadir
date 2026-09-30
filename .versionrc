@@ -1,0 +1,20 @@
+# Convco configuration: how `nadir`'s version is derived and written into CHANGELOG.md.
+#
+# Conventional Commits are the source of truth for the version. Convco reads them, bumps
+# the files listed under `bumpFiles`, and writes the changelog — so the version is a
+# consequence of the commit history rather than a number someone remembered to increment.
+{
+  "$schema": "https://unpkg.com/convco@0.7.2/convco.schema.json",
+  "bump": true,
+  "bumpFiles": [
+    { "filename": "Cargo.toml" },
+    { "filename": "Cargo.lock" },
+    { "filename": "package.json" },
+    { "filename": "python/nadir/pyproject.toml" },
+    { "filename": "pixi.toml" }
+  ],
+  "changelogFilename": "CHANGELOG.md",
+  "firstVersion": "0.0.1",
+  "preMajor": true,
+  "ignoreMergeCommits": true
+}

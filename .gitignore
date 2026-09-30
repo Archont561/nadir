@@ -1,0 +1,75 @@
+# ── pixi ───────────────────────────────────────────────────────────────────────
+# The environment is restored from the lockfile, not committed. `.pixi/envs` is a
+# multi-gigabyte tree of hardlinks that is meaningless on another machine.
+#
+# `!.pixi/config.toml` keeps pixi's own manifest-local config (activation scripts, task
+# timeouts) — it is the one file under `.pixi/` that is source rather than state.
+.pixi/*
+!.pixi/config.toml
+# `pixi publish` / `pixi build` output: the package archives a release produces are
+# artefacts of a tag, not source. `dist/` is where `pixi run publish-dist` puts them;
+# `*.conda` covers `pixi publish` with no `--target-dir`, which writes into the working
+# directory instead.
+dist/
+*.conda
+# The conda build backend's scratch, under `.pixi/`. Covered by the `.pixi/*` rule below,
+# named here so the reason is written down rather than left to be rediscovered.
+# `pixi run sandbox-pack` writes here before `sandbox-doctor` reviews the transport.
+.sandbox-out/
+# What `pixi run sandbox-restore` writes on the airlock side: the vendored crate sources
+# unpacked from the transport. The trailing slash matters — `.pixi-sandbox.toml`, the
+# reviewed plan, is tracked and must stay tracked. Once `cargo_vendor` is true this holds
+# every crate in Cargo.lock.
+.pixi-sandbox/
+# Written by the same restore, pointing cargo at the vendor directory above. It is a
+# property of a restored machine, not of the project: a committed copy would break every
+# clone that has no vendor tree.
+/.cargo/
+
+# ── Rust ───────────────────────────────────────────────────────────────────────
+# cargo's build output. The pattern is not anchored to a directory: cargo decides where a
+# workspace's target directory goes, and a rule that only covers the current location is
+# a rule that fails on the next layout.
+/target/
+target/
+# COG/orthomosaic outputs written next to the pipeline definition. These are the products
+# of a run over a 1,284-image dataset; they are hundreds of MB each and are reproducible
+# from the dataset. Anchored to the repository root so a `datasets/` or `testdata/` tree
+# holding a small committed fixture is not swept up with it.
+/outputs/
+
+# ── JavaScript / TypeScript ────────────────────────────────────────────────────
+node_modules/
+# Turbo's task cache and per-package log directory. Not anchored: turbo writes `.turbo/`
+# beside every workspace package, and `crates/package.json` makes `crates/` one of them —
+# which is why `Cargo.toml` also excludes `crates/.turbo` from its `members` glob. A build
+# artefact inside a directory another tool globs is the kind of coupling that shows up as an
+# unrelated error in an unrelated tool.
+.turbo/
+*.tsbuildinfo
+# Python: hatchling's editable-install shim, the `*.egg-info` that a build backend writes,
+# and `__pycache__`. The venv itself is not here — pixi owns it under `.pixi/`.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+# A stray `.venv` from someone who reached for the pip route instead of the pixi one. Ignored
+# rather than deleted, because it costs nothing and the alternative is a build that picks up
+# the wrong interpreter.
+.venv/
+
+# ── coverage ───────────────────────────────────────────────────────────────────
+# cargo-llvm-cov writes an lcov report into the crate's target directory; the html report
+# is a review artefact.
+lcov.info
+coverage/
+lcov-report/
+
+# ── editors and OS ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+# lefthook's own scratch, if it is ever pointed at a dirty tree. `.git/hooks/` is already
+# ignored by git and does not need a rule here.

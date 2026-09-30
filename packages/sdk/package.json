@@ -1,0 +1,28 @@
+{
+  "name": "@nadir/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TypeScript client for the nadir pipeline API",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": ["src"],
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "test": "bun test",
+    "cov": "bun test --coverage",
+    "fmt": "biome format --write .",
+    "advisories": "echo 'advisories: bun audit --production (no production deps yet)'"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@types/bun": "1.3.11",
+    "typescript": "5.9.3"
+  }
+}

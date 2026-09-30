@@ -1,0 +1,82 @@
+# Lefthook: the hooks that run before a commit leaves the machine.
+#
+# Configured in YAML rather than in `.git/hooks/`, because `.git/` is not versioned: a hook
+# a contributor has to install by hand is a hook that half the repository does not have.
+# `pixi run setup` writes the hooks via `lefthook install`, and `.git/hooks/` stays
+# untracked.
+#
+# The rule every hook below follows: a hook that can be bypassed is fine, a hook that is
+# slow is not. Nothing here builds the world; `pixi run gates` is the full check and runs in
+# CI. What a hook does is catch the mistakes that are cheap to fix and annoying to push back.
+
+pre-commit:
+  parallel: true
+  commands:
+    fmt:
+      # Only the formatter, and only on what is staged. `biome check --write` and
+      # `ruff format` fix; they do not fail. A hook that rejects a commit for a formatting
+      # difference is a hook people learn to `--no-verify`.
+      glob: "*.{js,ts,tsx,json,jsonc}"
+      run: bunx biome format --write --no-errors-on-unmatched {staged_files} 2>/dev/null || true
+      stage_fixed: true
+
+    fmt-python:
+      glob: "python/**/*.py"
+      run: python -m ruff format {staged_files} 2>/dev/null || true
+      stage_fixed: true
+
+    fmt-rust:
+      glob: "*.rs"
+      # `cargo fmt` is workspace-wide because rustfmt does not take a file list cheaply.
+      # It is fast enough (well under a second on this workspace) that the bluntness costs
+      # nothing.
+      run: cargo fmt --all
+      stage_fixed: true
+
+    trailing-whitespace:
+      # The cheapest possible check, and the one that shows up in every diff review.
+      #
+      # `grep -l` inverts to a list of offending files, and the `[ -n ]` test on that list is
+      # what decides the outcome. Testing grep's own exit status instead -- `grep ... && exit 1`
+      # -- fails the commit precisely when nothing is found, since a no-match grep returns 1
+      # and that becomes the script's exit status. The logic is right and the wiring inverts
+      # it, which is the worst combination: it rejects clean commits and accepts dirty ones.
+      run: |
+        files=$(git diff --cached --name-only --diff-filter=ACM | grep -Ev '\.(lock|svg|png|jpg|jpeg|webp|glb|tif|tiff|ico)$' || true)
+        if [ -n "$files" ]; then
+          offenders=$(grep -lI '[[:blank:]]$' $files || true)
+          if [ -n "$offenders" ]; then
+            grep -nI '[[:blank:]]$' $offenders
+            echo "trailing whitespace found"
+            exit 1
+          fi
+        fi
+
+    lockfile-up-to-date:
+      # Catches the commit that changes a manifest and forgets the lock. Without this, CI
+      # fails on a `--locked` install and the fix requires reconstructing which of several
+      # manifest edits caused it.
+      #
+      # The check is "is any lockfile among the staged files", so it is a negated
+      # *absence*: `grep -q` for a lockfile, and warn when that finds nothing. Testing the
+      # other way round -- `grep -qv` for a lockfile -- asks whether any staged file is not a
+      # lockfile, which is true for every commit that touches more than two files and warns
+      # unconditionally, including on commits where the lockfile is staged and current.
+      run: |
+        staged=$(git diff --cached --name-only)
+        if printf '%s\n' "$staged" | grep -qE '^(pixi\.toml|package\.json)$'; then
+          if ! printf '%s\n' "$staged" | grep -qE '^(pixi\.lock|bun\.lock)$'; then
+            echo "manifest changed without its lockfile: run 'pixi lock' and 'bun install'"
+            exit 1
+          fi
+        fi
+      stage_fixed: false
+
+pre-push:
+  parallel: false
+  commands:
+    # The real gate. Slower than a commit hook should be, which is why it is here and not
+    # there: a push is rarer than a commit, and a red CI run costs more than a slow push.
+    gates:
+      run: pixi run gates
+      stage_fixed: false

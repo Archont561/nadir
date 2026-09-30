@@ -1,0 +1,16 @@
+{
+  "name": "@nadir/rust",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Turbo facade over the cargo workspace",
+  "license": "MIT",
+  "scripts": {
+    "build": "cargo build --manifest-path ../Cargo.toml --workspace",
+    "typecheck": "cargo check --manifest-path ../Cargo.toml --workspace --all-targets",
+    "lint": "cargo clippy --manifest-path ../Cargo.toml --workspace --all-targets -- -D warnings && cargo fmt --manifest-path ../Cargo.toml --all -- --check",
+    "test": "cargo test --manifest-path ../Cargo.toml --workspace",
+    "cov": "cargo llvm-cov --manifest-path ../Cargo.toml --workspace --lcov --output-path ../lcov.info",
+    "fmt": "cargo fmt --manifest-path ../Cargo.toml --all",
+    "advisories": "cargo deny --manifest-path ../Cargo.toml --all-features check advisories bans licenses sources"
+  }
+}

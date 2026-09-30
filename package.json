@@ -1,0 +1,34 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "name": "nadir",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Artifact-driven photogrammetry pipeline engine",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Archont561/nadir.git"
+  },
+  "packageManager": "bun@1.3.11",
+  "engines": {
+    "bun": ">=1.3.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "python/*",
+    "crates"
+  ],
+  "scripts": {
+    "all:build": "turbo run build",
+    "all:lint": "turbo run lint",
+    "all:typecheck": "turbo run typecheck",
+    "all:test": "turbo run test",
+    "all:cov": "turbo run cov",
+    "all:fmt": "turbo run fmt",
+    "all:advisories": "turbo run advisories",
+    "gates": "turbo run build lint typecheck test advisories"
+  },
+  "devDependencies": {
+    "turbo": "2.11.5"
+  }
+}

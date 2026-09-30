@@ -1,0 +1,237 @@
+# Cargo.toml — the workspace root, and the package `pixi publish` builds.
+#
+# Both roles are here because of one hard constraint: `pixi-build-rust` builds a package by
+# running `cargo install --locked --path <source>`, and `cargo install` cannot install from
+# a *virtual* manifest — it has no `-p`, so a member cannot be selected out of one. The
+# directory a conda package is built from therefore has to be a package that is also the
+# root of the workspace that contains it.
+#
+# This file is that: a real `[package]` (nadir-cli) that also declares the `[workspace]`
+# every library below it belongs to. The two facts are not in tension — `cargo install
+# --path .` here builds this package and the subgraph it reaches, and nothing else.
+#
+# Consequences, stated once so they are not rediscovered later:
+#   - `crates/cli/` has no Cargo.toml. The binary's sources live there because that is
+#     where a reader looks for a crate's code; its manifest is this file, reached through
+#     `[[bin]] path`.
+#   - The Cargo workspace root is the repository root, so `cargo_vendor` in
+#     `.pixi-sandbox.toml` can be true: an airlocked machine can vendor and build the whole
+#     workspace, not just restore the toolchain.
+#   - `deny.toml` is here for the same reason: cargo-deny reads it from the workspace root.
+#   - The version of the project is owned by the root pixi.toml. It reaches Cargo through
+#     `[workspace.package]` below, and `pixi run version-check` asserts the two agree, so
+#     the authority stays single and the hop is checked rather than assumed.
+#
+# NOTE ON THE CRATE LIST: the members are the crate names from
+# `.knowledge/context.md` (Naming Conventions) — the ones V0.1 through V2.0 will need —
+# not only the crates that exist today. Each is declared with the dependencies it will
+# need, so `Cargo.lock` and `pixi.lock` describe the environment the project is going to
+# be built in rather than the one it happened to be started in. That matters most for the
+# offline sandbox: a lockfile that grows in V0.1 week 3 is a sandbox that has to be
+# repacked, and a machine with no network cannot repack one. The cost is a cold
+# `cargo build` that compiles crates nobody has imported yet, which is exactly the cost
+# that buys a lockfile and a licence policy that hold all the way to V2.
+#
+# A member with no source is a statement about the dependency graph, not a placeholder for
+# future work. Deleting a member is a deletion, and `cargo deny` will say so immediately.
+
+[workspace]
+# A glob and two exceptions, rather than a list. The glob on its own is a trap — cargo does
+# not filter glob matches on manifest existence, so any directory under `crates/` that is not
+# a crate is matched and the workspace fails to load with "failed to load manifest for
+# workspace member": an error about a directory the reader did not think was a workspace
+# input. `exclude` is cargo's answer for exactly that.
+#
+# The cost of the glob is that this list has to name every non-crate directory, and the cost
+# of not using one is that adding a crate means editing this file. The glob wins: a crate
+# that has to be registered in two places is a crate that gets added in one of them.
+members = ["crates/*"]
+# Edits the resolver to v3, which is what edition 2024 implies. Cargo falls back to v1 with
+# a warning otherwise, and v1 resolves features the old way — which means a feature that is
+# on in one member's dev-dependency graph can leak into another's. Pinning it means the
+# warning is gone and the resolution is the one the manifests actually describe.
+resolver = "3"
+exclude = [
+  # This package's binary sources. Their manifest is this file, reached through
+  # `[[bin]] path` below — see the header.
+  "crates/cli",
+  # Turbo's per-package log directory. `crates/package.json` makes `crates/` a Turbo
+  # package, so Turbo writes `crates/.turbo/`, and `crates/*` matches it. A build artifact
+  # inside a workspace glob is a class of bug worth naming in the file that causes it:
+  # without this line, `cargo build` fails with "failed to read
+  # crates/.turbo/Cargo.toml" the first time anyone runs `pixi run build`.
+  #
+  # `cacheDir` in turbo.json does not avoid this: it moves the task cache, but Turbo still
+  # writes a log file per package. The exclude is what actually fixes it.
+  "crates/.turbo",
+]
+
+# ── Shared package metadata ──────────────────────────────────────────────────
+# Every member inherits from here rather than restating it. The version is the interesting
+# one: it is pixi.toml's number, copied, and `version-check` fails if the two ever differ.
+# A member that hardcoded `version = "0.1.0"` would be a ninth place to forget to bump, and
+# the gate would no longer be O(1) in the number of crates.
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+# 1.88, and it is the graph's number rather than a preference: `rust = ">=1.98.1,<1.99"` in
+# pixi.toml pins the compiler that `pixi.lock` resolves, and this is the floor cargo enforces
+# when a contributor builds with a different toolchain than the lockfile names.
+rust-version = "1.88"
+license = "MIT"
+repository = "https://github.com/Archont561/nadir"
+homepage = "https://github.com/Archont561/nadir"
+authors = ["Archont561 <142521648+Archont561@users.noreply.github.com>"]
+
+# ── shared lint configuration ───────────────────────────────────────────────
+# Repo-level, inherited by every member with `[lints] workspace = true`. It lives here
+# rather than in each crate because a lint that one crate can opt out of is a lint that one
+# crate will opt out of, silently, at the moment it becomes inconvenient.
+#
+# The set is small on purpose. Every crate here is a scaffold with one trivial function in
+# it, and a gate that fires on a scaffold is a gate people learn to bypass. These are the
+# three that catch the mistakes that are expensive here: a public trait or type that nobody
+# documented (ADR-007 is a contract every adapter implements), `unsafe` (there is no reason
+# for any in a crate that links C libraries through a safe wrapper), and a `todo!()` that
+# ships.
+#
+# `expect_used`/`unwrap_used` are NOT enabled. They are the right lint for a parser crate
+# and the wrong one for a test suite, and cargo-deny-style blanket rules that a project
+# then suppresses in forty places are worse than no rule.
+[workspace.lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+todo = "warn"
+unimplemented = "warn"
+# `dbg!` left in a commit is a debugging statement that survived review. One lint covers
+# `dbg!` and `dbg_token!`.
+dbg_macro = "warn"
+
+# ── Shared dependency versions ────────────────────────────────────────────────
+# One place for every bound the workspace shares, so a bump is one edit rather than one
+# per crate. Versions come from `.knowledge/references/dependency-matrix.md`.
+#
+# Deliberately short. The scaffold compiles in seconds, which is what makes
+# `pixi run gates` worth running before every commit. The heavy tier-2 bindings — `gdal`,
+# `proj`, `opencv` — are commented out rather than absent: adding them is one edit, and it
+# is the edit that costs the first build its minutes. See `.knowledge/roadmap/v0-mvp.md`
+# for which stage pulls each in.
+[workspace.dependencies]
+# ── CLI / application ──────────────────────────────────────────────────────
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# ── planned for V0.1, not yet depended on ──────────────────────────────────
+# tokio = { version = "1", features = ["full"] }
+# rayon = "1.10"
+# serde = { version = "1", features = ["derive"] }
+# serde_json = "1"
+# toml = "0.8"
+# blake3 = "1"
+# uuid = { version = "1", features = ["v4", "serde"] }
+# petgraph = "0.6"
+# nalgebra = "0.33"
+# geo = "0.29"
+# geo-types = "0.7"
+# image = "0.25"
+# kamadak-exif = "0.5"
+# las = "0.9"
+# indicatif = "0.17"
+#
+# ── tier 2: C/C++ bindings, linked against the `engines` pixi feature ──────
+# gdal = "0.17"
+# proj = "0.28"
+# opencv = "0.93"
+#
+# ── tests ──────────────────────────────────────────────────────────────────
+# A dev-dependency of the binary, so it reaches `crates/cli/tests/` and not the crates
+# themselves. `tempfile` over a hand-rolled directory under `std::env::temp_dir`: the
+# hand-rolled version leaks directories when a test panics, and a leaked directory becomes
+# a stale fixture that makes the next run fail for the wrong reason.
+tempfile = "3"
+
+# ── this workspace ──────────────────────────────────────────────────────────
+# The `version` on each is required by `cargo deny`, which cannot resolve a workspace
+# dependency that has a path and no version. It is a copy of the authority above rather
+# than a second authority: `pixi run version-check` compares them and fails on a
+# difference, and convco bumps them together (`.versionrc`).
+nadir-core = { path = "crates/core", version = "0.1.0" }
+nadir-artifacts = { path = "crates/artifacts", version = "0.1.0" }
+nadir-pipeline = { path = "crates/pipeline", version = "0.1.0" }
+nadir-executor = { path = "crates/executor", version = "0.1.0" }
+nadir-dataset = { path = "crates/dataset", version = "0.1.0" }
+nadir-reconstruction = { path = "crates/reconstruction", version = "0.1.0" }
+nadir-geometry = { path = "crates/geometry", version = "0.1.0" }
+nadir-surface = { path = "crates/surface", version = "0.1.0" }
+nadir-cartography = { path = "crates/cartography", version = "0.1.0" }
+nadir-math = { path = "crates/math", version = "0.1.0" }
+
+# ── package ─────────────────────────────────────────────────────────────────
+# This package is the `nadir` binary. The package name is not the binary name: as a conda
+# package `nadir-cli` installs the binary `nadir`, and the distinction matters on a channel
+# where a user searching for "nadir" should also find the library packages.
+[package]
+name = "nadir-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Artifact-driven photogrammetry pipeline engine"
+keywords = ["photogrammetry", "colmap", "orthomosaic", "gis", "pointcloud"]
+categories = ["science::geo", "command-line-utilities"]
+# `nadir-cli` is published to crates.io, so its dependencies must be available there first.
+# The library crates stay internal until they have a stable public contract.
+publish = ["crates-io"]
+
+[[bin]]
+name = "nadir"
+# The sources live under `crates/cli/` — that is where a reader looks for a CLI's code —
+# but the manifest has to be this file. See the header.
+path = "crates/cli/src/main.rs"
+
+# The binary's own tests, registered by hand for the same reason: its manifest is not in
+# its directory. Every other crate gets the `tests/` layout from cargo for free.
+[[test]]
+name = "cli"
+path = "crates/cli/tests/cli.rs"
+
+[dependencies]
+# The CLI's job is argument parsing and messages. It depends on every workspace crate, and
+# on nothing that does the work yet.
+#
+# Depending on all of them is deliberate, not laziness: `nadir crates` reads each crate's
+# `STAGE`, so this edge is what makes the workspace link-checked. A crate that fails to
+# compile, or a stage constant that disappears, breaks the build rather than surfacing
+# later as a wrong row in a report.
+clap = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+nadir-core = { workspace = true }
+nadir-artifacts = { workspace = true }
+nadir-pipeline = { workspace = true }
+nadir-executor = { workspace = true }
+nadir-dataset = { workspace = true }
+nadir-reconstruction = { workspace = true }
+nadir-geometry = { workspace = true }
+nadir-surface = { workspace = true }
+nadir-cartography = { workspace = true }
+nadir-math = { workspace = true }
+
+[dev-dependencies]
+# The CLI's tests run the binary through `std::process::Command` on the path cargo built
+# (`CARGO_BIN_EXE_nadir`), which is one fewer dependency to license and audit than an
+# assertion library with an opinion about how to find a binary.
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

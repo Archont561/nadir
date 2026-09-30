@@ -1,0 +1,24 @@
+schema = 1
+branch_prefix = "sandbox"
+
+# Vendor the Cargo workspace into the sandbox transport: `true` because a root `Cargo.lock`
+# now exists, and because that lock is only useful offline if the crate sources travel with
+# the environment.
+#
+# The two conditions are the same constraint read from two sides. `pixi-sandbox` vendors
+# the *Cargo* workspace, and it refuses to run without a lock at the root ("needs a
+# Cargo.lock at <root>"). The root is a `[package]` as well as the `[workspace]` — see the
+# header of `Cargo.toml` for why `pixi-build-rust`'s `cargo install --path` forces that —
+# so the root is also where the lock lives, and an airlocked machine can restore the
+# toolchain *and* build the workspace.
+#
+# The cost is transport size, paid on every dependency change: every crate in `Cargo.lock`
+# is copied into the pack. That is why the crate list is short right now. Each `gdal` or
+# `opencv` binding added in V0.1 adds tens of megabytes here, which is a real number to
+# weigh against a real download for a contributor with a network connection.
+cargo_vendor = true
+
+[[bundle]]
+name = "developer"
+environments = ["default"]
+platforms = ["linux-64"]

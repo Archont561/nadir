@@ -1,0 +1,135 @@
+name: ci
+
+# The repository has one CI job per environment matrix entry and no build matrix beyond
+# that. What differs between runners is the thing the architecture actually cares about:
+# whether the external engines are present. A PR that passes with COLMAP missing and a real
+# COLMAP runner both matter, and the cheap one runs first.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+# A new push to the same branch cancels the older run. The check is fast, and a stale
+# result on a superseded commit is worse than no result.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Fail on the first broken step. Without this, a workflow runs every job to completion
+  # and reports the failures at the end, which on a four-minute build wastes three minutes
+  # discovering a problem the first step already found.
+  RUSTFLAGS: -D warnings
+  CARGO_TERM_COLOR: always
+
+jobs:
+  gates:
+    name: gates (linux-64, ${{ matrix.engines }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # `minimal` is the scaffold: the Rust workspace, the TS workspace and the Python
+        # package, with no geospatial engines. It is the configuration most contributors
+        # work in and the one a build regression shows up in first, so it runs on every
+        # change. `engines` adds the conda-forge geospatial stack, which is what the
+        # adapters bind against.
+        include:
+          - engines: minimal
+            pixi_features: rust,js,python,build,utils
+          - engines: engines
+            pixi_features: rust,js,python,engines,build,utils
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+
+      # The same one-liner the README documents, and the same checksum-verified release the
+      # sandbox workflow uses. Pinned by SHA so a moved tag cannot change what CI installs.
+      - name: Install pixi
+        uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          pixi-version: v0.59.0
+          cache: true
+
+      # `--frozen-lockfile`, not `pixi install`. A CI run that re-solves produces a
+      # different environment from the one that was committed, which means a green run says
+      # nothing about the lockfile. This step failing is the correct outcome for a
+      # manifest edited without its lock.
+      - name: Install the environment
+        run: pixi install --locked --frozen-lockfile -e default --feature '${{ matrix.pixi_features }}'
+
+      - name: Report versions
+        run: pixi run --locked --frozen-lockfile --environment default exec -- python -VV
+
+      - name: Gates
+        run: pixi run --locked --frozen-lockfile gates
+
+      - name: Build
+        run: pixi run --locked --frozen-lockfile build
+
+      # The CLI's own integration tests, run against the release binary. The in-workspace
+      # `cargo test` runs the debug build; this is the one that would be published, and the
+      # one whose exit codes a caller actually sees.
+      - name: Release binary smoke test
+        run: |
+          cargo install --locked --path . --root target/install
+          target/install/bin/nadir --version
+          target/install/bin/nadir plan
+          target/install/bin/nadir crates
+
+  sandbox:
+    name: sandbox plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: gates
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+
+      - name: Install pixi
+        uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          pixi-version: v0.59.0
+
+      - name: Install the environment
+        run: pixi install --locked --frozen-lockfile -e default
+
+      # The sandbox is what lets a customer with no network restore a working nadir. If the
+      # plan drifts from the manifest, the failure surfaces here rather than at the
+      # customer's first `restore.sh` run.
+      - name: Validate the sandbox publish plan
+        run: pixi run --locked --frozen-lockfile lint-sandbox-plan
+
+  advisories:
+    name: advisories
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Kept out of `gates` on purpose: it needs the network to fetch the advisory database,
+    # and a gate that fails because rustsec.io was unreachable trains people to ignore
+    # gates. It runs as its own job, where a network failure is visibly a network failure.
+    needs: gates
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+
+      - name: Install pixi
+        uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          pixi-version: v0.59.0
+
+      - name: Install the environment
+        run: pixi install --locked --frozen-lockfile -e default --feature rust,build,utils
+
+      - name: Check Rust advisories and licences
+        run: pixi run --locked --frozen-lockfile advisories

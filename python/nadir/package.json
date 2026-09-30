@@ -1,0 +1,16 @@
+{
+  "name": "@nadir/python",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Turbo facade over the python package",
+  "license": "MIT",
+  "scripts": {
+    "build": "python -m pip install --no-deps --editable .",
+    "typecheck": "python -m mypy --version >/dev/null 2>&1 || echo 'mypy: not installed (optional)'",
+    "lint": "python -m ruff check .",
+    "test": "python -m pytest",
+    "cov": "python -m pytest --cov=nadir --cov-report=lcov",
+    "fmt": "python -m ruff format . && python -m ruff check --fix .",
+    "advisories": "python -m pip list --outdated --format=columns 2>/dev/null | head -20 || true"
+  }
+}

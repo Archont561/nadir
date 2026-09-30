@@ -1,0 +1,38 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "globalDependencies": [
+    "pixi.toml",
+    "pixi.lock",
+    "Cargo.toml",
+    "Cargo.lock",
+    "tsconfig.base.json",
+    "biome.json"
+  ],
+  "cacheDir": ".turbo/cache",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "build/**", "target/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "lint": {
+      "cache": false
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "cov": {
+      "cache": false
+    },
+    "fmt": {
+      "cache": false
+    },
+    "advisories": {
+      "cache": false
+    }
+  }
+}

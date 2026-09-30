@@ -1,0 +1,73 @@
+# cargo-deny: the supply-chain gate for the Rust workspace.
+#
+# Run by `pixi run lint` through the `@nadir/rust` Turbo facade. It answers the question
+# `cargo build` cannot: is every crate in `Cargo.lock` a crate we are willing to ship,
+# under a licence we can use, from a source we trust?
+#
+# Config lives at the repository root because `cargo deny` searches upward for `deny.toml`
+# and the search is per-invocation — a second copy under `crates/` would be a second file to
+# forget to update.
+
+[graph]
+# All features: a crate that is only pulled in under an optional feature is still compiled
+# in a release build, and an advisory in it is just as real.
+all-features = true
+
+[advisories]
+version = 2
+# Report a vulnerability and fail. `deny` is the point — a warning nobody reads is a
+# warning nobody acts on.
+ignore = []
+
+[licenses]
+version = 2
+# Exactly the licences the current dependency tree uses, and no more.
+#
+# A pre-seeded allow-list looks reasonable and is actively harmful: cargo-deny warns about
+# every allowed licence it did not encounter, so a list written for V0.1's `gdal`/`proj`
+# emits eight warnings on a day when the tree contains nothing but MIT. A gate that warns
+# about its own configuration is a gate people learn to scroll past, and the warning that
+# matters — a dependency under a licence nobody approved — is in the same stream.
+#
+# So: add a licence the day a dependency needs it, and record why in the same commit. The
+# list is currently MIT (clap, anyhow, thiserror, tracing, tempfile), Apache-2.0 (the
+# `*-exception` variants of the syn/quote/proc-macro2 chain) and Unicode-3.0
+# (unicode-ident). `gdal`/`proj`/`opencv` will need their own entries when the tier-2
+# bindings land.
+allow = ["MIT", "Apache-2.0", "Unicode-3.0"]
+# 0.8 rather than 1.0: a crate that ships an expression like "(MIT OR Apache-2.0) AND
+# Unicode-3.0" is machine-readable and unambiguous, but one that states its licence in
+# prose is not, and refusing to reason about it at all is a false positive. 1.0 would treat
+# every non-machine-readable licence as unapproved, which on a real dependency tree means
+# either a wall of noise or a habit of adding `confidence-threshold = 0.5`.
+#
+# `Unicode-3.0` is here for `unicode-ident`, which arrives through `clap_derive` ->
+# `proc-macro2`. It is a permissive licence, but it is not MIT or Apache-2.0, so it has to
+# be named rather than assumed — which is the whole reason this list is explicit.
+confidence-threshold = 0.8
+
+[bans]
+# Multiple versions of a crate are usually a real duplication cost, so they are reported.
+# `wildcard` stays denied: a `foo = "*"` dependency makes `Cargo.lock` the only thing
+# standing between the build and an unreviewed upgrade.
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = false
+# Prototype, development and unpublished crates are allowed, with the reason recorded:
+# they are how a dependency gets to be used before it is ready to be depended on.
+allow = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+# crates.io only. A git dependency pinned to a commit is auditable, but it is also a
+# dependency nobody re-reviews, and this repository does not need one yet.
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
+
+# Licences that may not appear even though they would otherwise pass: copyleft that would
+# affect how nadir is distributed, and unlicensed code.
+[licenses.private]
+# A workspace crate with `publish = false` still has to be MIT, because the source is in
+# this repository under this repository's licence.
+ignore = false

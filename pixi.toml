@@ -1,0 +1,486 @@
+# pixi.toml — THE workspace manifest. This file is the environment (ADR-006).
+#
+# One manifest, six feature layers, one lockfile:
+#
+#   rust     the toolchain the engine is built and gated with: rust, cargo-nextest,
+#            cargo-llvm-cov, cargo-deny
+#   js       bun, the only JavaScript runtime here, carrying turbo and biome as
+#            workspace packages rather than conda dependencies
+#   python   the interpreter and the whole SDK toolchain: pytest, pytest-cov, ruff,
+#            hatchling, pip
+#   engines  the external photogrammetry/geospatial stack COLMAP and the OpenMVS
+#            adapter shell out to: colmap, pdal, gdal, proj, libopencv
+#   build    cmake, ninja, pkg-config — needed to link the C/C++ tier-2 crates
+#   utils    the repository's own instruments: convco, lefthook, actionlint
+#
+# The layers exist so a version bump to one toolchain is its own reviewable diff, and so
+# `default` (all six) is a deliberate statement rather than an accident of whatever was
+# last added. `engines` is the layer that makes this manifest different from an ordinary
+# Rust workspace: it is here because ADR-001 scopes the pipeline to step-scoped external
+# engines, and those engines are subprocesses on PATH, not crates to link.
+#
+# The toolchain is pinned rather than inherited. `pixi.lock` records the exact compiler
+# the engine is built and gated with, so a contributor's rustup version cannot decide
+# whether `pixi run gates` passes.
+#
+# There is no Node.js and no pnpm anywhere in this manifest. `bun` is the only
+# JavaScript runtime: conda-forge has no `turbo`, and pnpm would be a second resolution
+# record competing with bun.lock. Tasks reach the JS toolchain through `bun x` / `bun run`,
+# never through a `node_modules/.bin` path — those entries carry a `node` shebang, which no
+# environment here provides. (`.knowledge/deployment/pixi-setup.md` still describes a
+# `nodejs` 22 + `pnpm` `web` feature; that text predates this manifest and is superseded.)
+#
+# The Python toolchain lives *in* the environment rather than in a venv, so the SDK's
+# whole toolchain is one `pixi.lock`. `py-install` therefore installs the package with
+# `--no-deps` — the dependencies are already solved, and letting pip resolve them a second
+# time would give the SDK a version of pydantic the lockfile does not know about. It is
+# `python -m pip`, not `pip`: PATH is not trustworthy inside a task, and conda-forge's
+# interpreter is the one that must run it.
+#
+# `convco`, `lefthook` and `actionlint` are conda dependencies, not npm ones: the git hooks
+# must work on a machine restored from the sandbox branch, and `scripts/restore.sh` puts a
+# restored `default` environment's `bin/` on PATH but no `node_modules`.
+#
+# ── COLMAP is pinned to a CPU build ───────────────────────────────────────────
+# `colmap = ">=3.9"` alone resolves to the `cuda_126` build, which drags cuda-cudart and
+# cuda-version into every environment including CI runners with no GPU (verified by
+# solving both ways against conda-forge). `build = "cpu_*"` selects the CPU build of the
+# same 3.13.0 release and pulls no CUDA artefact at all. GPU COLMAP is the `gpu` feature's
+# problem, not `default`'s.
+#
+# ── OpenMVS is absent, and that is a finding rather than an omission ───────────
+# `openmvs` does not exist on conda-forge for linux-64 — `pixi search openmvs` returns no
+# packages at all, not merely nothing >= 2.2, and a manifest containing it fails to solve
+# outright. `.knowledge/deployment/pixi-setup.md` anticipated exactly this. It is
+# therefore absent from every layer, and the OpenMVS adapter (V0.1 week 3) is blocked on
+# one of: the `build-openmvs` source task below, a separate Docker stage, or a conda-forge
+# submission. Do not add the dependency without re-running `pixi lock` — a lock that cannot
+# solve is a broken lock, and CI runs `pixi install --locked`. An empty `[feature.openmvs]`
+# is not declared either: pixi warns about a feature no environment selects.
+#
+# Pins (verified by solving on 2026-09-30): rust 1.98.1, bun 1.3.11, python 3.13.2,
+# colmap 3.13.0 (cpu), gdal 3.12.2, proj 9.7.1, pdal 2.9.3, libopencv 4.12.0, cmake 4.2.3,
+# pytest 8.4.x, ruff 0.14.x, hatchling 1.27.x, cargo-nextest 0.9.146, cargo-llvm-cov 0.9.1,
+# cargo-deny 0.20.2, convco 0.7.2, lefthook 2.1.15, actionlint 1.7.12. Adding a pin means
+# one `pixi lock` to refresh pixi.lock — `pixi install --locked` in CI and the devcontainer
+# fails until that lands.
+
+[workspace]
+name = "nadir"
+version = "0.1.0"
+description = "Artifact-driven photogrammetry pipeline engine"
+authors = ["Archont561 <142521648+Archont561@users.noreply.github.com>"]
+license = "MIT"
+homepage = "https://github.com/Archont561/nadir"
+repository = "https://github.com/Archont561/nadir"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+requires-pixi = ">=0.81.0"
+# `pixi-build` is what makes `[package]` below legal. Without it, `pixi publish` fails with
+# "section is only allowed when the `pixi-build` preview flag is enabled" — which is a
+# confusing way to say the manifest is missing this line, because the error points at
+# `[package]` rather than at the flag that admits it.
+#
+# It is opted into here, in the one manifest that owns the workspace, rather than per
+# package: opting in per package would mean a workspace whose members disagree about whether
+# building is allowed, and a publish that succeeds for one member and is rejected for the
+# next. Still a preview feature upstream, so it belongs here with a comment rather than
+# silently.
+preview = ["pixi-build"]
+
+# One place to bump a version; the tables below opt in with { workspace = true }.
+[workspace.dependencies]
+rust = ">=1.98.1,<1.99"
+bun = ">=1.3.11,<2"
+python = ">=3.13,<3.14"
+pytest = ">=8.4,<9"
+pytest-cov = ">=6,<7"
+ruff = ">=0.14,<0.15"
+hatchling = ">=1.27,<2"
+pip = ">=26,<27"
+colmap = { version = ">=3.9", build = "cpu_*" }
+gdal = ">=3.9"
+proj = ">=9.4"
+pdal = ">=2.7"
+libopencv = ">=4.9"
+cmake = ">=3.28"
+ninja = "*"
+pkg-config = "*"
+cargo-nextest = ">=0.9.144,<0.10"
+cargo-llvm-cov = ">=0.9.1,<0.10"
+cargo-deny = ">=0.20.2,<0.21"
+convco = ">=0.7.2,<0.8"
+lefthook = ">=2.1.15,<3"
+actionlint = ">=1.7.12,<2"
+
+# ── feature layers ────────────────────────────────────────────────────────────
+
+[feature.rust.dependencies]
+# The toolchain the engine is built and gated with.
+#
+# `cargo-nextest`, `cargo-llvm-cov` and `cargo-deny` are conda-forge packages rather
+# than `cargo install` invocations: a `cargo install` binary is built from source into
+# ~/.cargo/bin on every fresh clone and every devcontainer, and is absent from the
+# published sandbox branch, so a restored airlock could not run the same gates the
+# developer ran. As conda dependencies they travel with `pixi.lock` in the `default`
+# environment that `.pixi-sandbox.toml` packs.
+rust = { workspace = true }
+cargo-nextest = { workspace = true }
+cargo-llvm-cov = { workspace = true }
+cargo-deny = { workspace = true }
+
+[feature.js.dependencies]
+# The only JavaScript runtime in the project.
+#
+# `turbo` and `biome` are npm workspace packages, not conda dependencies: conda-forge has
+# no `turbo` (verified against the channel), and `biome` is resolved from `package.json` so
+# one lockfile decides both the linter and the version its `biome.json` schema names.
+# Tasks therefore reach the JS toolchain through `bun x` / `bun run`.
+bun = { workspace = true }
+
+[feature.python.dependencies]
+# The interpreter and the whole SDK toolchain, from one lockfile.
+#
+# `hatchling` is the build backend and `pip` is what `py-install` edits this package into
+# the interpreter with: an editable install is a build, and without a backend in the
+# environment it would either download one into a temporary venv or refuse. It is
+# `python -m pip` with nothing to install into that this dependency exists to prevent.
+python = { workspace = true }
+pytest = { workspace = true }
+# pytest-cov rather than `coverage` alone: it is the same coverage.py, wired into the
+# runner the suite already uses.
+pytest-cov = { workspace = true }
+ruff = { workspace = true }
+hatchling = { workspace = true }
+pip = { workspace = true }
+
+[feature.engines.dependencies]
+# The external engines the pipeline shells out to. ADR-001: step-scoped tools, not an
+# ODM monolith — so these are binaries on PATH that the adapters invoke as subprocesses,
+# and the versions here are the versions the adapters are tested against.
+#
+# This is the layer with the largest solve surface and the one most likely to fail: the
+# geospatial stack on conda-forge is large, version-coupled, and pulls X11/Qt transitively
+# through libopencv. A version bump here is the diff most worth reviewing carefully.
+#
+# `gdal` and `proj` are the C libraries the `gdal` and `proj` crates link (tier 2 in the
+# dependency matrix); `colmap`, `pdal` and the GDAL/PROJ CLIs are the subprocess engines
+# (tier 3). Both tiers come from the same conda packages, which is the point of ADR-006.
+colmap = { workspace = true }
+gdal = { workspace = true }
+proj = { workspace = true }
+pdal = { workspace = true }
+libopencv = { workspace = true }
+
+[feature.build.dependencies]
+# Compilers and build-system tools. Separate from `rust` because a contributor who only
+# runs `nadir inspect` needs no linker, and because the C++ dependencies (libopencv,
+# gdal) build from source on platforms where conda-forge has no wheel.
+cmake = { workspace = true }
+ninja = { workspace = true }
+pkg-config = { workspace = true }
+
+[feature.utils.dependencies]
+# Repo utilities shared by the git hooks and CI, so the two cannot drift.
+#   convco     — conventional-commit check (commit-msg hook) + CHANGELOG.md
+#   lefthook   — the hooks themselves; every hook delegates to a task below
+#   actionlint — the GitHub Actions linter
+convco = { workspace = true }
+lefthook = { workspace = true }
+actionlint = { workspace = true }
+
+[environments]
+# `default` is pixi's implicit environment, so a task runs as `pixi run <task>`: no `-e`
+# flag in a shell, a git hook, or a workflow step.
+#
+# Everything a gate needs is here. `web`/`wasm`/`gpu`/`python` from
+# `.knowledge/deployment/pixi-setup.md` are NOT declared: each is a separate solve that
+# each needs its own sandbox bundle packed, verified and published per platform, and
+# none of them has a line of code to build yet. Adding one is a `[feature.*]` plus an
+# entry here, plus a `[[bundle]]` in `.pixi-sandbox.toml` — the declaration is the cheap
+# part, the transport is the cost.
+default = { features = [
+  "rust",
+  "js",
+  "python",
+  "engines",
+  "build",
+  "utils",
+] }
+
+# ── package ───────────────────────────────────────────────────────────────────
+# The tables below make this manifest two things at once: the pixi workspace root that owns
+# the environment, and the `nadir-cli` conda package that `pixi publish` builds. The merge
+# is deliberate, and it is forced by the same constraint that shapes `Cargo.toml`:
+# `pixi-build-rust` runs `cargo install --locked --path .`, and `cargo install` cannot
+# install from a virtual manifest. The package's source directory is the directory holding
+# its manifest, so this manifest has to sit beside the Cargo manifest that is also the
+# package's.
+#
+# There is deliberately NO `crates/cli/pixi.toml`. A sub-manifest is the tidier-looking
+# option and it is wrong here for the reason above: `crates/cli/` is not a Cargo package
+# (its manifest is the root `Cargo.toml`, reached through `[[bin]] path`), so a
+# `[package]` table there would give `pixi-build-rust` a directory with nothing to install.
+# The fix is not a better sub-manifest location, it is the merge.
+
+[package]
+# The package name is not the crate name. `nadir-cli` as a package installs the binary
+# `nadir`, and the distinction matters on a channel where a user searching for "nadir"
+# should also find the library packages.
+name = "nadir-cli"
+# The root pixi.toml is the version authority for every published surface, and this table
+# inherits rather than restating it. Same reasoning as the Cargo manifests: `pixi run
+# version-check` walks every surface and fails on a literal, so the two cannot drift.
+version = { workspace = true }
+# The opt-in flag `pixi publish` looks for. Without it this package is still buildable
+# with `pixi build --path .` and invisible to a workspace-wide publish.
+publish = true
+license = "MIT"
+description = "Artifact-driven photogrammetry pipeline engine"
+readme = "README.md"
+repository = "https://github.com/Archont561/nadir"
+homepage = "https://github.com/Archont561/nadir"
+
+[package.build]
+# `pixi-build-rust` runs `cargo install --locked --path . --root $PREFIX`, so the crate must
+# be self-contained and carry its own `Cargo.lock` — it does, at the `Cargo.lock` beside this
+# manifest, because this directory is the Cargo workspace root too. That shared lockfile is
+# also what `.pixi-sandbox.toml`'s `cargo_vendor = true` vendors: one lock, two consumers
+# (the offline transport and the conda build), and neither can diverge from the other.
+#
+# `--locked` is not optional and not ours to change, which makes the committed `Cargo.lock`
+# load-bearing for `pixi publish`. A build that re-resolves would produce a binary built
+# from dependencies nobody reviewed.
+backend = { name = "pixi-build-rust", version = ">=0.5,<0.6", channels = [
+  "https://prefix.dev/conda-forge",
+] }
+
+[package.build.config]
+# The C compiler only.
+#
+# The backend defaults to `["rust", "c"]`, and the "rust" entry asks conda-forge's compiler
+# infrastructure for `rust_linux-64` — which then requires the `rust` metapackage, and that
+# package no longer exists: on conda-forge `rust` *is* the platform package. Asking for both
+# is an unsolvable environment, and the failure is a wall of "rust 1.xx.* for which no
+# candidates were found" rather than anything mentioning the compiler.
+#
+# The `c` entry is what supplies the linker; the toolchain comes from the pinned `rust`
+# build dependency below. So this is the minimal correct answer, not a short one.
+compilers = ["c"]
+
+# One binary, named explicitly. An empty list installs whatever cargo thinks the package
+# produces, which is a decision made implicitly by a file that a later `src/bin/` would
+# change without anybody editing this one.
+binaries = ["nadir"]
+# `cargo install` already builds release; the profile belongs in the root `Cargo.toml` where
+# rustc reads it, not here where only this backend would see it.
+extra-args = []
+
+[package.build-dependencies]
+# The backend adds rust and cargo itself; pinning the compiler is what makes a released
+# binary reproducible across the years between this commit and the next.
+#
+# Keep this bound in step with `rust` under `[feature.rust.dependencies]`. When those two
+# drift, the binary in the conda package is built by a different compiler than the one
+# `pixi install` gives a developer, and a bug that reproduces in only one of them is a
+# genuinely expensive afternoon.
+rust = ">=1.98.1,<1.99"
+
+# No `[package.host-dependencies]` and no `[package.run-dependencies]` yet, and that is a
+# fact about the current dependency graph rather than an oversight. `nadir` today links the
+# C runtime and nothing else: `crates/cli` depends on `clap`, `anyhow`, `thiserror`,
+# `tracing` and the workspace crates, and no `gdal-sys`/`proj-sys`/`opencv` binding is
+# compiled in yet (see `[workspace.dependencies]` in `Cargo.toml`, where the tier-2 crates
+# are commented out with the reason).
+#
+# When the tier-2 bindings land, this is where `gdal`, `proj` and `opencv` go, as
+# `[package.run-dependencies]` — the binary needs them at run time, so they must be pulled
+# into the consuming environment by the package, not just present in the build one. Getting
+# this wrong produces a package that installs cleanly and then fails on `libgdal.so.34`,
+# which is the single worst failure mode for a distributed CLI.
+
+# ── tasks ─────────────────────────────────────────────────────────────────────
+# Everything a human, a git hook, or a CI job does is one of these, so a GitHub Actions
+# step can be a single line: `pixi run <task>`. Logic lives here (reviewable, runnable
+# locally), not in workflow YAML.
+#
+# The package-specific work — build, test, lint, typecheck, cov, fmt — is NOT here. Each
+# package owns its own commands in the manifest a reader of that package already opens:
+#
+#   crates/package.json        the Rust workspace (cargo build/nextest/clippy/deny/llvm-cov)
+#   python/nadir/package.json  the Python SDK     (pytest, ruff, pytest-cov)
+#   packages/*                 the Bun workspace  (tsc, bun test)
+#
+# Turbo owns the ordering and caching across those manifests; the tasks in the repo-wide
+# block below are the single entry point into it, so `pixi run test` still runs every
+# language's tests and a CI step is still one line. What stays outside turbo is the work
+# that is genuinely repository-global — the changelog, the Actions lint, the Rust
+# advisories, the sandbox transport — plus the `setup` a fresh clone needs.
+#
+# NOTE (pixi 0.81): `default-environment` is only accepted on tasks that have a `cmd`.
+# Pure aggregators (setup / gates / ci) omit it and resolve their environment through the
+# tasks they depend on.
+
+[tasks]
+
+# ── setup ──────────────────────────────────────────────────────────────────────
+# One install for the whole Bun workspace: the root package.json declares the members and
+# the root bun.lock is the single resolution record. Every turbo task depends on this, so
+# `pixi run test` works on a fresh clone — and turbo itself is a workspace dependency, so
+# without it there is no orchestrator to run.
+bun-install = { cmd = "bun install --frozen-lockfile", description = "Install the Bun workspace from the root lockfile" }
+# The SDK itself, editable, with no dependency resolution of its own — the interpreter and
+# the libraries are already in this environment. `python -m pip`, not `pip`: PATH is not
+# trustworthy inside a task, and conda-forge's interpreter is the one that must run it.
+py-install = { cmd = "python -m pip install --no-deps --editable python/nadir", description = "Install the nadir Python SDK in editable mode" }
+# Install the git hooks. Run once per clone; `lefthook install` is idempotent.
+hooks-install = { cmd = "lefthook install", description = "Install the lefthook git hooks into .git/hooks" }
+setup = { description = "Materialise the workspace: bun workspace, Python SDK, git hooks", depends-on = [
+  "bun-install",
+  "py-install",
+  "hooks-install",
+] }
+# Runs after `setup` from a devcontainer's postCreateCommand, once the editor has attached.
+#
+# Separate from `setup` because the two have different failure modes. `setup` is
+# nondeterministic across machines (a bun or pip network hiccup) and a devcontainer's
+# postCreateCommand failing leaves a container that is built but looks broken. This task
+# only reports: it says what is installed, and it never mutates anything. That makes it safe
+# to re-run to diagnose a container, which is the reason it exists.
+post-create = { cmd = "bash scripts/post-create.sh", description = "Report the state of the devcontainer: tools, engines, and the next command to run" }
+# Assert that every place the project version is written agrees with the one authority.
+#
+# The authority is `[workspace].version` in the root Cargo.toml; everything else — pixi.toml,
+# package.json, the Bun packages, the Python pyproject, the crates' shared metadata — is a
+# copy of that number, and every copy is a place to forget to bump. Convco bumps them all
+# in one command (`.versionrc`), so this task exists to catch the case where somebody edited
+# one by hand.
+#
+# It reads the files and compares strings rather than parsing TOML/JSON, so it needs no
+# tool that is not already in this environment, and so a malformed manifest is a failure
+# rather than a silently skipped check.
+version-check = { cmd = "bash scripts/version-check.sh", description = "Assert the project version is identical in Cargo.toml, pixi.toml, package.json and pyproject.toml" }
+
+# ── repo-wide task graph (turbo) ────────────────────────────────────────────────
+# Each reaches turbo through `bun run <script>` in the root package.json, never through a
+# `node_modules/.bin` path. `turbo run <task>` fans out to every package that declares that
+# script and skips the ones that do not — so `build` compiles the Rust binary and the TS
+# workspace, `test` runs nextest, pytest and bun test, `lint` runs clippy + cargo-deny +
+# ruff + biome, all under one command and one cache. The `depends-on` here is only what a
+# clone needs before turbo can start: the Bun install for turbo itself, and the editable
+# Python install for the pytest tasks.
+build = { cmd = "bun run all:build", depends-on = [
+  "bun-install",
+], description = "Build every package that has a build (turbo: Rust release binary + TS workspace)" }
+test = { cmd = "bun run all:test", depends-on = [
+  "bun-install",
+  "py-install",
+], description = "Run every package's tests (turbo: Rust nextest + doctests, Python pytest, TS)" }
+typecheck = { cmd = "bun run all:typecheck", depends-on = [
+  "bun-install",
+], description = "Type-check every package that has a typecheck (turbo: cargo check + tsc)" }
+lint = { cmd = "bun run all:lint", depends-on = [
+  "bun-install",
+], description = "Lint every package (turbo: Rust fmt-check/clippy/deny, Python ruff, biome for JS/JSON)" }
+cov = { cmd = "bun run all:cov", depends-on = [
+  "bun-install",
+  "py-install",
+], description = "Measure coverage for every package that reports it (turbo: llvm-cov, pytest-cov, bun)" }
+fmt = { cmd = "bun run all:fmt", depends-on = [
+  "bun-install",
+], description = "Rewrite every package with its formatter (turbo: cargo fmt, ruff, biome)" }
+# The Rust advisory scan is a package task too (crates/package.json), but it gets its own
+# pixi entry point and stays out of `lint`/`gates`: it needs the RustSec advisory database
+# over the network, and a gate that fails because rustsec.io was unreachable trains people
+# to ignore gates. The release workflow runs it.
+advisories = { cmd = "bun run all:advisories", depends-on = [
+  "bun-install",
+], description = "Check the Rust dependencies against the advisory database (network)" }
+
+# ── repository-global utilities (lefthook + CI share these) ─────────────────────
+# Conventional-commit check for the commit-msg hook; reads the proposed message from
+# stdin (git passes it via {1} in lefthook.yml).
+lint-commit = { cmd = "convco check --from-stdin", description = "Validate a commit message against the conventional-commit spec" }
+changelog = { cmd = "convco changelog > CHANGELOG.md", description = "Regenerate CHANGELOG.md from conventional commits" }
+changelog-preview = { cmd = "convco changelog", description = "Print the changelog convco would write, without writing it" }
+# Scans .github/workflows/*.yml by default. Repository-global, so it stays a pixi task and
+# is called by `gates` directly rather than through turbo.
+lint-actions = { cmd = "actionlint", description = "Lint the GitHub Actions workflows" }
+
+# ── sandbox transport (pixi-sandbox) ───────────────────────────────────────────
+# pack -> doctor -> publish, locally. `pixi-sandbox` is not a conda dependency; it is a
+# static release binary, installed by the checksum-verified one-liner in its README.
+#
+# `cargo_vendor = true` in `.pixi-sandbox.toml`, and `--cargo-vendor` on `sandbox-pack`
+# below. The two are the same setting in two places and are flipped together; a pack that
+# silently dropped the vendored crates would still succeed and still restore a workspace
+# that cannot build, which is the failure this arrangement exists to prevent.
+sandbox-pack = { cmd = "pixi-sandbox pack --repo-root . --envs default --output-dir .sandbox-out --platform linux-64 --fetch-tools --cargo-vendor --self-bin $SANDBOX_SELF_BIN", description = "Pack the offline sandbox transport" }
+sandbox-doctor = { cmd = "pixi-sandbox doctor --branch-location .sandbox-out --verify", description = "Verify a packed transport without writing anything" }
+sandbox-publish = { cmd = "pixi-sandbox publish --input-dir .sandbox-out --branch-name sandbox/developer-linux-64 --remote origin", description = "Publish the transport to its orphan branch" }
+sandbox-restore = { cmd = "bash scripts/restore.sh", description = "Restore the offline sandbox from its orphan branch" }
+# The publish plan is a wire format shared with the publisher, so a malformed bundle must
+# fail a gate rather than a push to the orphan branch. NOT part of `lint`: `pixi-sandbox`
+# is not a conda dependency, so a local `pixi run lint` would fail on a missing binary
+# rather than on a real finding. CI installs it with the SHA-pinned setup action and calls
+# this task as its own step.
+lint-sandbox-plan = { cmd = "pixi-sandbox plan --config .pixi-sandbox.toml", description = "Validate the reviewed sandbox publish plan" }
+
+# ── publish (conda) ───────────────────────────────────────────────────────────
+# Two tasks, and the split is the point.
+#
+# `publish-plan` resolves the publish set and stops: it validates `[package]` against the
+# manifests without building anything and without touching a channel. That makes it a gate
+# rather than a release step — a `[package]` naming a binary `cargo install` does not
+# produce, or a `binaries` entry that disagrees with `[[bin]] name`, fails a pull request
+# instead of a release. It is in `gates` below.
+#
+# `publish-dist` is the real build, and it is deliberately NOT in `gates`: it compiles the
+# whole workspace under a freshly pinned toolchain and takes about a minute. A gate that
+# takes a minute on every push is a gate people stop waiting for, and this one has no answer
+# to give about the source — only about the artefact.
+#
+# Neither ever uploads. `pixi publish` only reaches a channel when `--channel` is passed, and
+# nothing in this file passes it: publishing to conda-forge is a deliberate, separate act.
+publish-plan = { cmd = "pixi publish --dry-run", description = "Resolve and print the publish set without building or uploading" }
+publish-dist = { cmd = "pixi publish --target-dir dist", description = "Build the publishable conda packages into dist/" }
+
+# ── run ────────────────────────────────────────────────────────────────────────
+# V0.1 CLI surface (context.md, Naming Conventions). These invoke the built binary rather
+# than fanning out, so they stay repo-global: `nadir` is one binary, not a package graph.
+run-process = { cmd = "cargo run --release -- process", description = "Run `nadir process`" }
+run-inspect = { cmd = "cargo run --release -- inspect", description = "Run `nadir inspect` on a dataset" }
+run-plan = { cmd = "cargo run --release -- plan", description = "Print the pipeline DAG without executing it" }
+serve = { cmd = "cargo run --release -- serve --port 8080", description = "Start the worker HTTP server on :8080" }
+
+# ── OpenMVS (blocked) ──────────────────────────────────────────────────────────
+# Not a dependency: `openmvs` has no conda-forge package for linux-64, and a manifest
+# naming it fails to solve outright. The source build is the escape hatch
+# `.knowledge/deployment/pixi-setup.md` describes. It needs network access and several
+# minutes, so it is a task nobody runs by accident. Run it once, then pack the sandbox:
+# a binary built into `$CONDA_PREFIX` is only offline-restorable if the pack captured it.
+build-openmvs = { cmd = """
+    git clone --depth 1 https://github.com/cdcseacave/openMVS.git "$CONDA_PREFIX/.cache/openmvs" && \
+    cmake -B "$CONDA_PREFIX/.cache/openmvs/build" -G Ninja "$CONDA_PREFIX/.cache/openmvs" \
+      -DCMAKE_INSTALL_PREFIX="$CONDA_PREFIX" -DBUILD_SHARED_LIBS=ON && \
+    cmake --build "$CONDA_PREFIX/.cache/openmvs/build" --target install
+""", description = "Build and install OpenMVS from source into this environment (network, slow)" }
+
+# ── gates ──────────────────────────────────────────────────────────────────────
+# One command for "what CI will run". The package-specific checks are three turbo
+# invocations (`lint`, `typecheck`, `test`) that fan out across every language; the rest is
+# the repository-global check that has no package to belong to. `advisories` is the
+# deliberate omission — it needs the network (see its note above).
+gates = { description = "Every check that must pass before a commit lands", depends-on = [
+  "lint",
+  "typecheck",
+  "test",
+  "lint-actions",
+  "version-check",
+  "publish-plan",
+] }
+# `gates` plus the built artefacts.
+ci = { description = "`gates` plus the built artefacts", depends-on = [
+  "gates",
+  "build",
+] }

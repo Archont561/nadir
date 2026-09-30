@@ -1,0 +1,30 @@
+# nadir-math — Pure-Rust linear algebra and interpolation.
+#
+# A workspace member with no dependencies yet. The stage's real dependencies are listed in
+# `.knowledge/references/dependency-matrix.md` and belong here when the stage is written;
+# an unused dependency is a download every `pixi install` and every sandbox restore pays
+# for.
+#
+# See the header of `../../Cargo.toml` for why `crates/*` is the member glob and why
+# `crates/cli` is excluded from it.
+
+[package]
+name = "nadir-math"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Pure-Rust linear algebra and interpolation. The crate ADR-008 targets for wasm32"
+keywords = ["photogrammetry", "pipeline"]
+categories = ["science::geo"]
+# Internal until the crate has a stable public contract.
+publish = false
+
+[dependencies]
+# None yet. `nadir-core` will be the first: it is the crate every other one depends on.
+
+[lints]
+workspace = true

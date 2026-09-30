@@ -1,0 +1,56 @@
+# Lockfiles are generated. Their contents are the point, not their formatting, so git
+# should never try to merge or diff them: a reviewer wants to see "the lockfile changed",
+# and `linguist-generated` keeps them out of language statistics and off the diff of a
+# routine dependency bump.
+
+# Pixi: the conda solve. Binary because two solvers can produce different orderings for the
+# same package set, and a textual merge of that is a corrupt lockfile rather than a conflict.
+pixi.lock merge=binary linguist-generated=true -diff
+
+# Cargo: the crate graph. Same reasoning — `cargo update` rewrites the whole file, and a
+# line-level merge produces a `Cargo.lock` that no longer matches any manifest.
+Cargo.lock merge=binary linguist-generated=true -diff
+
+# Bun: the JS workspace resolution. Textual, unlike the other two, because bun rewrites only
+# the entries it changed and a textual merge is usually correct. Kept out of statistics
+# regardless.
+bun.lock linguist-generated=true
+
+# ── source defaults ───────────────────────────────────────────────────────────
+# Everything is UTF-8 text unless a file says otherwise, so declare it once here rather
+# than trusting the absence of binary content. `-text` is not set: the lockfiles above opt
+# out individually, and a blanket `* text=auto eol=lf` is what makes a stray PNG render as
+# a diff in a pull request.
+* text=auto
+
+# Real binary assets, which `text=auto` cannot infer reliably from a file with no
+# extension or an unusual one.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.tif binary
+*.tiff binary
+*.glb binary
+*.gltf binary
+*.pdf binary
+*.zip binary
+*.gz binary
+
+# Shell scripts must be LF. A CRLF shebang is not a warning, it is a file that cannot run,
+# and the failure appears on a Linux CI runner that checked out the file nobody tested on
+# Windows. `.bat` and `.cmd` are the deliberate exception: they need CRLF.
+*.sh text eol=lf
+*.bash text eol=lf
+scripts/*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Languages where the line ending is not noise. A `.ps1` that a Linux runner has to run is a
+# `.ps1`; a `.ps1` in a docs snippet is not. The one that matters is scripts/.
+
+# Documentation: markdown is prose, and trailing whitespace in it is a hard line break that
+# someone is sometimes relying on, so no whitespace rule here either.
+*.md text
