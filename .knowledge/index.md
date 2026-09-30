@@ -30,6 +30,8 @@ Portable project knowledge for Nadir, organized for progressive disclosure.
 * [ADR-006: Pixi for Dependency Management](decisions/006-pixi-for-dependency-management.md) - Records the accepted architecture decision on Pixi for Dependency Management.
 * [ADR-007: Engine Trait API Surface](decisions/007-engine-trait-api-surface.md) - Records the accepted architecture decision on Engine Trait API Surface.
 * [ADR-008: WASM / Edge / Browser Strategy](decisions/008-wasm-edge-browser-strategy.md) - Records the accepted architecture decision on WASM / Edge / Browser Strategy.
+* [ADR-009: One Manifest per Root](decisions/009-one-manifest-per-root.md) - Why `pixi.toml` is both the workspace root and the `nadir-cli` package manifest, and why there is no `crates/cli/pixi.toml`.
+* [ADR-010: Bun, Not Node](decisions/010-bun-not-node.md) - Bun is the only JavaScript runtime, package manager and test runner; no `nodejs` and no `pnpm` in any feature.
 
 ## Deployment
 

@@ -23,6 +23,12 @@ pixi install --locked
 pixi run setup      # bun workspace, python sdk, git hooks
 ```
 
+`pixi.toml` declares `requires-pixi = ">=0.81.0"`, and an older pixi refuses the manifest
+before it installs anything. That floor and the `pixi-version:` pin in
+`.github/workflows/ci.yml` are one decision written in two files — raise them together, or
+every CI job fails at the *Install pixi* step with a version error that says nothing about
+the change under test.
+
 Node.js and pnpm are deliberately absent. Bun is the JavaScript runtime, the package
 manager and the test runner.
 
@@ -116,9 +122,15 @@ bash scripts/restore.sh        # or scripts/restore.ps1 on Windows
 ```
 
 It clones an orphan branch, verifies every blob against the manifest, and unpacks the
-environment plus the vendored crate sources. `pixi run sandbox-doctor` verifies a packed
-transport without writing anything, and `pixi run lint-sandbox-plan` validates the publish
-plan — the last one is in `gates`.
+environment plus the vendored crate sources. The branch has to exist first: it is written
+by the `publish sandbox` workflow on every push to `main`, so a fresh clone whose last
+publish has not finished yet gets `not a valid object name: origin/sandbox/...`.
+
+`pixi run sandbox-doctor` verifies a packed transport without writing anything, and
+`pixi run lint-sandbox-plan` validates the publish plan. `lint-sandbox-plan` is **not** in
+`gates` and cannot be: `pixi-sandbox` is a release binary rather than a conda dependency,
+so a local `pixi run gates` would fail on a missing binary rather than on a real finding.
+CI runs it as its own job, after installing the tool with the SHA-pinned setup action.
 
 Never run `sandbox-publish` without reviewing the plan first. It writes to a branch on
 `origin`.
