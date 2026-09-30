@@ -1,9 +1,14 @@
 name: ci
 
-# The repository has one CI job per environment matrix entry and no build matrix beyond
-# that. What differs between runners is the thing the architecture actually cares about:
-# whether the external engines are present. A PR that passes with COLMAP missing and a real
-# COLMAP runner both matter, and the cheap one runs first.
+# Three jobs, one environment. `gates` is everything `pixi run gates` runs plus the build
+# and a smoke test of the release binary; `sandbox` validates the offline transport plan;
+# `advisories` is the network-dependent scan that is deliberately not a gate. The split is
+# by failure mode, not by speed: a red `advisories` means rustsec said something, and a red
+# `sandbox` means an airlocked customer's restore would break.
+#
+# Every pixi step pins the same pixi version, and that pin has to satisfy `requires-pixi`
+# in pixi.toml. They are one decision recorded in two files; changing one alone turns every
+# job red before it reaches the change under test.
 
 on:
   push:
@@ -22,66 +27,66 @@ permissions:
   contents: read
 
 env:
-  # Fail on the first broken step. Without this, a workflow runs every job to completion
-  # and reports the failures at the end, which on a four-minute build wastes three minutes
-  # discovering a problem the first step already found.
+  # A warning that is not an error is a warning nobody fixes. Clippy and rustc are gates
+  # here, not advisors, so the whole workflow builds with warnings denied.
   RUSTFLAGS: -D warnings
   CARGO_TERM_COLOR: always
 
 jobs:
   gates:
-    name: gates (linux-64, ${{ matrix.engines }})
+    name: gates (linux-64, default)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    strategy:
-      fail-fast: false
-      matrix:
-        # `minimal` is the scaffold: the Rust workspace, the TS workspace and the Python
-        # package, with no geospatial engines. It is the configuration most contributors
-        # work in and the one a build regression shows up in first, so it runs on every
-        # change. `engines` adds the conda-forge geospatial stack, which is what the
-        # adapters bind against.
-        include:
-          - engines: minimal
-            pixi_features: rust,js,python,build,utils
-          - engines: engines
-            pixi_features: rust,js,python,engines,build,utils
+    # There is no matrix, and its absence is a finding rather than a simplification. The
+    # matrix that used to be here ran a `minimal` (no geospatial engines) and an `engines`
+    # entry by passing `--feature` to `pixi install`. `pixi install` has no `--feature`
+    # flag: features are composed into environments in `pixi.toml`, and `pixi.lock`
+    # records one environment, `default`. A second CI configuration is therefore a
+    # `[environments] minimal = { features = [...] }` plus a `pixi lock`, not a workflow
+    # edit — until that lands, `-e default` is the only environment CI can honestly
+    # install with `--locked`.
 
     steps:
       - name: Check out the repository
         uses: actions/checkout@v5
 
-      # The same one-liner the README documents, and the same checksum-verified release the
-      # sandbox workflow uses. Pinned by SHA so a moved tag cannot change what CI installs.
+      # The pixi version is pinned, and the pin must satisfy `requires-pixi` in pixi.toml
+      # (currently `>=0.81.0`). A pin below that floor fails during this step — before the
+      # environment is installed and before any gate runs — with a version-requirement
+      # error rather than anything about the change under test. Bump the two together.
       - name: Install pixi
-        uses: prefix-dev/setup-pixi@v0.10.0
+        uses: prefix-dev/setup-pixi@v0.10.2
         with:
-          pixi-version: v0.59.0
+          pixi-version: v0.81.0
+          environments: default
           cache: true
 
-      # `--frozen-lockfile`, not `pixi install`. A CI run that re-solves produces a
-      # different environment from the one that was committed, which means a green run says
-      # nothing about the lockfile. This step failing is the correct outcome for a
-      # manifest edited without its lock.
+      # `--locked`, not a bare `pixi install`. A CI run that re-solves produces a different
+      # environment from the one that was committed, which means a green run says nothing
+      # about the lockfile. This step failing is the correct outcome for a manifest edited
+      # without its lock. (`--locked` and `--frozen` are mutually exclusive: `--frozen`
+      # would install the lockfile *without* checking it against the manifest, which is the
+      # opposite of what is wanted here.)
       - name: Install the environment
-        run: pixi install --locked --frozen-lockfile -e default --feature '${{ matrix.pixi_features }}'
+        run: pixi install --locked -e default
 
       - name: Report versions
-        run: pixi run --locked --frozen-lockfile --environment default exec -- python -VV
+        run: pixi run --locked -e default python -VV
 
       - name: Gates
-        run: pixi run --locked --frozen-lockfile gates
+        run: pixi run --locked gates
 
       - name: Build
-        run: pixi run --locked --frozen-lockfile build
+        run: pixi run --locked build
 
       # The CLI's own integration tests, run against the release binary. The in-workspace
       # `cargo test` runs the debug build; this is the one that would be published, and the
-      # one whose exit codes a caller actually sees.
+      # one whose exit codes a caller actually sees. Run through `pixi run` so it is the
+      # toolchain in `pixi.lock` that builds it, not whatever rustup the runner image ships.
       - name: Release binary smoke test
         run: |
-          cargo install --locked --path . --root target/install
+          pixi run --locked -e default cargo install --locked --path . --root target/install
           target/install/bin/nadir --version
           target/install/bin/nadir plan
           target/install/bin/nadir crates
@@ -97,18 +102,28 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Install pixi
-        uses: prefix-dev/setup-pixi@v0.10.0
+        uses: prefix-dev/setup-pixi@v0.10.2
         with:
-          pixi-version: v0.59.0
+          pixi-version: v0.81.0
+          environments: default
 
       - name: Install the environment
-        run: pixi install --locked --frozen-lockfile -e default
+        run: pixi install --locked -e default
+
+      # `pixi-sandbox` is deliberately not a conda dependency (see the task note in
+      # pixi.toml), so `lint-sandbox-plan` has no binary to call unless this step puts one
+      # on PATH. Same SHA-pinned setup action, same version, as publish-sandbox.yml — the
+      # plan validated here and the plan the publisher executes must come from one tool.
+      - name: Install pixi-sandbox
+        uses: Archont561/pixi-sandbox/setup@118d53f07ca7e6bc5c931f1bf6a8d601dcf7a7b9
+        with:
+          version: v0.3.2
 
       # The sandbox is what lets a customer with no network restore a working nadir. If the
       # plan drifts from the manifest, the failure surfaces here rather than at the
       # customer's first `restore.sh` run.
       - name: Validate the sandbox publish plan
-        run: pixi run --locked --frozen-lockfile lint-sandbox-plan
+        run: pixi run --locked lint-sandbox-plan
 
   advisories:
     name: advisories
@@ -124,12 +139,15 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Install pixi
-        uses: prefix-dev/setup-pixi@v0.10.0
+        uses: prefix-dev/setup-pixi@v0.10.2
         with:
-          pixi-version: v0.59.0
+          pixi-version: v0.81.0
+          environments: default
 
+      # `-e default`, and not a feature subset: `pixi install` selects environments, not
+      # features, and `default` is the only environment `pixi.lock` records.
       - name: Install the environment
-        run: pixi install --locked --frozen-lockfile -e default --feature rust,build,utils
+        run: pixi install --locked -e default
 
       - name: Check Rust advisories and licences
-        run: pixi run --locked --frozen-lockfile advisories
+        run: pixi run --locked advisories
