@@ -3,14 +3,34 @@ type: Deployment Guide
 title: Pixi Setup
 description: "Full pixi.toml, environments, developer onboarding, Docker integration, CI"
 purpose: Full pixi.toml, environments, developer onboarding, Docker integration, CI
-last_updated: 2025-02-23
-status: stable
+last_updated: 2026-09-30
+status: superseded-in-part
+supersedes_note: "The manifest in this document is the design-era plan. The repository's pixi.toml is authoritative; see the Status banner below."
 related:
   - docker-strategy.md
   - ../decisions/006-pixi-for-dependency-management.md
+  - ../decisions/009-one-manifest-per-root.md
+  - ../decisions/010-bun-not-node.md
 ---
 
 # Pixi Setup
+
+> **Status: superseded in part (2026-09-30).** This document is the design-era plan, and
+> it is kept because the reasoning still explains *why* pixi owns the system
+> dependencies. The `pixi.toml` shown below is **not** the manifest the repository ships.
+> [`/pixi.toml`](../../pixi.toml) is authoritative. Where the two disagree, the
+> repository wins:
+>
+> | This document says | The repository does | Why |
+> | --- | --- | --- |
+> | `[feature.web]` with `nodejs = "22.*"` and `pnpm = ">=9"`, and `web-*` tasks calling `pnpm` | No Node and no pnpm anywhere; `bun` is the only JavaScript dependency, and `turbo`/`biome` are Bun workspace packages | [ADR-010](../decisions/010-bun-not-node.md) |
+> | Six environments (`default`, `full`, `web`, `python`, `wasm`, `ci`) | One environment, `default`, composed of six *features* (`rust`, `js`, `python`, `engines`, `build`, `utils`) | Each extra environment is a separate solve and a separate sandbox bundle to pack, verify and publish; none has code to build yet |
+> | `[feature.openmvs] openmvs = ">=2.2"` | OpenMVS is not a dependency; `pixi run build-openmvs` builds it from source | `openmvs` has no conda-forge package for linux-64 at all — a manifest naming it fails to solve |
+> | `colmap = ">=3.9"` | `colmap = { version = ">=3.9", build = "cpu_*" }` | The default build string resolves to `cuda_126` and drags a GPU stack into CI runners with no GPU |
+> | Tasks are per-language cargo commands in `[tasks]` | `[tasks]` holds only repository-global work; per-package commands live in `crates/package.json`, `python/nadir/package.json` and `packages/*`, orchestrated by turbo | One entry point (`pixi run gates`) over one cache |
+> | CI example: `setup-pixi@v0.8`, `pixi-version: latest` | `setup-pixi@v0.10.2`, `pixi-version: v0.81.0`, matching `requires-pixi = ">=0.81.0"` | An unpinned version is a CI result that changes without a commit; a pin *below* `requires-pixi` fails before any gate runs |
+>
+> Read this document for the rationale. Read `pixi.toml` for the facts.
 
 ## TL;DR
 

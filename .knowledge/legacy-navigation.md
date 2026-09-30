@@ -47,7 +47,7 @@ status: stable
 | V1 platform details | `roadmap/v1-platform.md` |
 | V2 scale / native engines | `roadmap/v2-scale.md` |
 | WASM / browser / edge | `roadmap/wasm-vision.md` |
-| "Why did we decide X?" | `decisions/001-*.md` through `decisions/008-*.md` |
+| "Why did we decide X?" | `decisions/001-*.md` through `decisions/010-*.md` |
 | External docs / links | `references/sources.md` |
 | Dependency versions | `references/dependency-matrix.md` |
 | Everything (max context) | All files in all directories |
@@ -75,6 +75,8 @@ status: stable
 | [`decisions/006-pixi-for-dependency-management.md`](./decisions/006-pixi-for-dependency-management.md) | Pixi for Dependency Management | Single `pixi.toml` + `pixi.lock` replaces apt/brew/rustup/nvm/Dockerfile RUN lines |
 | [`decisions/007-engine-trait-api-surface.md`](./decisions/007-engine-trait-api-surface.md) | Engine Trait API Surface | 16 stable traits, small config structs, big adapters that hide tool-specific flags |
 | [`decisions/008-wasm-edge-browser-strategy.md`](./decisions/008-wasm-edge-browser-strategy.md) | WASM / Edge / Browser Strategy | Rust → wasm32 for browser preview (<100 imgs), edge tiling, serverless post-processing |
+| [`decisions/009-one-manifest-per-root.md`](./decisions/009-one-manifest-per-root.md) | One Manifest per Root | `pixi.toml` is workspace *and* `nadir-cli` package; `cargo install` cannot install from a virtual manifest |
+| [`decisions/010-bun-not-node.md`](./decisions/010-bun-not-node.md) | Bun, Not Node | One JS runtime, one `bun.lock`; no `nodejs`/`pnpm` in any feature; tools via `bun x`, never `node_modules/.bin` |
 
 ### Architecture — System Design (6 files)
 

@@ -3,7 +3,7 @@ type: Reference
 title: Dependency Matrix
 description: "All Rust crates and external tools with versions, tiers, and WASM status"
 purpose: All Rust crates and external tools with versions, tiers, and WASM status
-last_updated: 2025-02-23
+last_updated: 2026-09-30
 status: stable
 related:
   - sources.md
@@ -85,12 +85,27 @@ related:
 
 | Tool | Version | Pixi Package | Environment |
 |---|---|---|---|
-| Rust | ≥ 1.83 | `rust` | default |
-| Node.js | 22.x | `nodejs` | web |
-| pnpm | ≥ 9 | `pnpm` | web |
-| Python | 3.12 | `python` | python |
-| wasm-pack | any | `wasm-pack` | wasm |
-| CUDA | ≥ 12.0 | `cuda-toolkit` | gpu |
+| Rust | ≥ 1.98.1, < 1.99 | `rust` | default (`rust` feature) |
+| Bun | ≥ 1.3.11, < 2 | `bun` | default (`js` feature) |
+| Python | ≥ 3.13, < 3.14 | `python` | default (`python` feature) |
+| cargo-nextest | ≥ 0.9.144 | `cargo-nextest` | default (`rust` feature) |
+| cargo-llvm-cov | ≥ 0.9.1 | `cargo-llvm-cov` | default (`rust` feature) |
+| cargo-deny | ≥ 0.20.2 | `cargo-deny` | default (`rust` feature) |
+| ruff | ≥ 0.14, < 0.15 | `ruff` | default (`python` feature) |
+| convco | ≥ 0.7.2 | `convco` | default (`utils` feature) |
+| lefthook | ≥ 2.1.15 | `lefthook` | default (`utils` feature) |
+| actionlint | ≥ 1.7.12 | `actionlint` | default (`utils` feature) |
+| turbo | npm | *not conda* — Bun workspace dependency | root `package.json` |
+| biome | npm | *not conda* — Bun workspace dependency | root `package.json` |
+| wasm-pack | any | `wasm-pack` | *not declared* — no `wasm` environment yet |
+| CUDA | ≥ 12.0 | `cuda-toolkit` | *not declared* — no `gpu` environment yet |
+
+> **Node.js and pnpm are deliberately absent** (2026-09-30). The rows that listed
+> `nodejs = "22.*"` and `pnpm = ">=9"` under a `web` environment described the design-era
+> plan; Bun is the runtime, the package manager and the test runner, and there is one
+> environment (`default`) rather than a per-feature set of them. See
+> [ADR-010](../decisions/010-bun-not-node.md). Versions above are the pins in
+> [`/pixi.toml`](../../pixi.toml), which is authoritative.
 
 ## Infrastructure (V2.0+)
 
