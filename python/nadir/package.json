@@ -5,7 +5,7 @@
   "description": "Turbo facade over the native Python SDK",
   "license": "MIT",
   "scripts": {
-    "build": "maturin develop --features extension-module",
+    "build": "maturin build --release --features extension-module --out ../../dist/pypi",
     "typecheck": "echo 'Python API is runtime-checked at the native transport boundary'",
     "lint": "cd ../.. && ruff check python/nadir && ruff format --check python/nadir",
     "test": "cd ../.. && pytest python/nadir/tests",
