@@ -12,7 +12,7 @@ milestone: m-0
 dependencies: []
 references:
   - .knowledge/architecture/engine-registry.md
-  - .knowledge/decisions/001-step-scoped-vs-odm-monolith.md
+  - backlog/docs/decisions/001-step-scoped-vs-odm-monolith.md
 priority: high
 ordinal: 2000
 ---

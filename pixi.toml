@@ -7,7 +7,7 @@
 #   js       bun, the only JavaScript runtime here, carrying turbo and biome as
 #            workspace packages rather than conda dependencies
 #   python   the interpreter and the whole SDK toolchain: pytest, pytest-cov, ruff,
-#            hatchling, pip
+#            maturin, pip
 #   engines  the external photogrammetry/geospatial stack COLMAP and the OpenMVS
 #            adapter shell out to: colmap, pdal, gdal, proj, libopencv
 #   build    cmake, ninja, pkg-config — needed to link the C/C++ tier-2 crates
@@ -97,6 +97,7 @@ pytest = ">=8.4,<9"
 pytest-cov = ">=6,<7"
 ruff = ">=0.14,<0.15"
 hatchling = ">=1.27,<2"
+maturin = ">=1.7,<2"
 pip = ">=26,<27"
 colmap = { version = ">=3.9", build = "cpu_*" }
 gdal = ">=3.9"
@@ -141,10 +142,8 @@ bun = { workspace = true }
 [feature.python.dependencies]
 # The interpreter and the whole SDK toolchain, from one lockfile.
 #
-# `hatchling` is the build backend and `pip` is what `py-install` edits this package into
-# the interpreter with: an editable install is a build, and without a backend in the
-# environment it would either download one into a temporary venv or refuse. It is
-# `python -m pip` with nothing to install into that this dependency exists to prevent.
+# `hatchling` remains in the locked Python toolchain for existing pure-Python package
+# workflows; `maturin` builds this package's PyO3 extension and editable install.
 python = { workspace = true }
 pytest = { workspace = true }
 # pytest-cov rather than `coverage` alone: it is the same coverage.py, wired into the
@@ -152,6 +151,8 @@ pytest = { workspace = true }
 pytest-cov = { workspace = true }
 ruff = { workspace = true }
 hatchling = { workspace = true }
+# Maturin builds the PyO3 extension and packages the Python namespace in one wheel.
+maturin = { workspace = true }
 pip = { workspace = true }
 
 [feature.engines.dependencies]
@@ -329,10 +330,9 @@ rust = ">=1.98.1,<1.99"
 # `pixi run test` works on a fresh clone — and turbo itself is a workspace dependency, so
 # without it there is no orchestrator to run.
 bun-install = { cmd = "bun install --frozen-lockfile", description = "Install the Bun workspace from the root lockfile" }
-# The SDK itself, editable, with no dependency resolution of its own — the interpreter and
-# the libraries are already in this environment. `python -m pip`, not `pip`: PATH is not
-# trustworthy inside a task, and conda-forge's interpreter is the one that must run it.
-py-install = { cmd = "python -m pip install --no-deps --editable python/nadir", description = "Install the nadir Python SDK in editable mode" }
+# Build the PyO3 extension and install the mixed package editable into Pixi's interpreter.
+# Maturin and Cargo both come from this locked environment.
+py-install = { cmd = "maturin develop --features extension-module", cwd = "python/nadir", description = "Build and install the native nadir Python SDK" }
 # Install the git hooks. Run once per clone; `lefthook install` is idempotent.
 hooks-install = { cmd = "lefthook install", description = "Install the lefthook git hooks into .git/hooks" }
 setup = { description = "Materialise the workspace: bun workspace, Python SDK, git hooks", depends-on = [

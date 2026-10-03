@@ -11,7 +11,7 @@ milestone: m-0
 dependencies: []
 references:
   - .knowledge/architecture/artifact-model.md
-  - .knowledge/roadmap/v0-mvp.md
+  - backlog/docs/roadmaps/v0-mvp.md
 priority: high
 ordinal: 1000
 ---

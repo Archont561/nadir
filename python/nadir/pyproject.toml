@@ -1,39 +1,35 @@
-[project]
-name = "nadir"
-version = "0.1.0"
-description = "Python client for the nadir pipeline API"
-readme = "README.md"
-license = { text = "MIT" }
-requires-python = ">=3.13,<3.14"
-# No runtime dependencies yet. The V0.1 client is a thin HTTP wrapper; adding `httpx` or
-# `requests` is one line here and one entry in `pixi.toml`'s python layer, and until then
-# the environment carries nothing for it.
-dependencies = []
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
 
-[project.optional-dependencies]
-# `dev` is an optional-dependency group rather than a second install target, so
-# `pip install -e python/nadir[dev]` gives a working checkout without a separate
-# requirements file that can drift from `pixi.toml`.
-dev = [
-  "pytest>=8.4",
-  "pytest-cov>=6.2",
-  "ruff>=0.9",
+[project]
+name = "nadir-sdk"
+version = "0.1.0"
+description = "Native Python bindings for the nadir photogrammetry engine"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.13,<3.14"
+authors = [{ name = "Archont561", email = "142521648+Archont561@users.noreply.github.com" }]
+keywords = ["photogrammetry", "geospatial", "rust", "pyo3"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Rust",
+  "Topic :: Scientific/Engineering :: GIS",
+  "Typing :: Typed",
 ]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[project.urls]
+Homepage = "https://github.com/Archont561/nadir"
+Repository = "https://github.com/Archont561/nadir"
 
-[tool.hatch.build.targets.wheel]
-# Only the package directory. Without this, hatchling picks up `tests/` and the turbo facade
-# and ships them in the wheel.
-packages = ["src/nadir"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-# `-ra` so a summary of skips and xfails survives CI logs; `strict-markers` so a typo in a
-# marker name is an error rather than a silently ignored filter.
-addopts = "-ra --strict-markers"
+[tool.maturin]
+manifest-path = "../../crates/python-native/Cargo.toml"
+python-source = "src"
+module-name = "nadir._native"
+bindings = "pyo3"
+features = ["extension-module"]
+strip = true
 
 [tool.ruff]
 target-version = "py313"
@@ -41,16 +37,9 @@ line-length = 100
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-# The same small set as `workspace.lints` in `Cargo.toml`: enough to catch the mistakes that
-# are expensive here, not so much that a contributor learns to run `ruff check --fix`
-# without reading the diff.
 select = ["E", "F", "I", "UP", "B", "SIM"]
-ignore = [
-  # Long lines are caught by the formatter; the linter's copy of the same check produces
-  # conflicting diagnostics for multi-line strings.
-  "E501",
-]
+ignore = ["E501"]
 
-[tool.ruff.lint.per-file-ignores]
-# Tests assert on things that are awkward to name precisely, and `assert` is the point.
-"tests/*" = ["S101"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"

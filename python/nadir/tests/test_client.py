@@ -1,16 +1,17 @@
-"""Tests for the nadir Python client."""
+"""Contract tests for the native Python face."""
 
 from __future__ import annotations
 
 import nadir
 
 
-def test_describe_names_the_package_and_its_stage() -> None:
-    description = nadir.describe()
-    assert "nadir/client" in description
-    assert nadir.STAGE in description
+def test_ping_crosses_the_native_boundary() -> None:
+    assert nadir.ping("pytest") == "pytest"
 
 
-def test_the_stage_is_not_empty() -> None:
-    # A stage emptied by a bad merge still imports; this is the test that notices.
-    assert nadir.STAGE
+def test_description_comes_from_rust_core() -> None:
+    assert "nadir-core" in nadir.describe()
+
+
+def test_transport_version_matches_engine() -> None:
+    assert nadir.version()["transportVersion"] == nadir.TRANSPORT_VERSION

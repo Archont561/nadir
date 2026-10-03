@@ -10,8 +10,8 @@ labels:
   - math
 dependencies: []
 references:
-  - .knowledge/roadmap/wasm-vision.md
-  - .knowledge/decisions/008-wasm-edge-browser-strategy.md
+  - backlog/docs/roadmaps/wasm-vision.md
+  - backlog/docs/decisions/008-wasm-edge-browser-strategy.md
 priority: low
 type: feature
 ordinal: 22000

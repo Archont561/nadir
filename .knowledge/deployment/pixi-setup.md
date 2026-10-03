@@ -8,9 +8,9 @@ status: superseded-in-part
 supersedes_note: "The manifest in this document is the design-era plan. The repository's pixi.toml is authoritative; see the Status banner below."
 related:
   - docker-strategy.md
-  - ../decisions/006-pixi-for-dependency-management.md
-  - ../decisions/009-one-manifest-per-root.md
-  - ../decisions/010-bun-not-node.md
+  - ../../backlog/docs/decisions/006-pixi-for-dependency-management.md
+  - ../../backlog/docs/decisions/009-one-manifest-per-root.md
+  - ../../backlog/docs/decisions/010-bun-not-node.md
 ---
 
 # Pixi Setup
@@ -23,7 +23,7 @@ related:
 >
 > | This document says | The repository does | Why |
 > | --- | --- | --- |
-> | `[feature.web]` with `nodejs = "22.*"` and `pnpm = ">=9"`, and `web-*` tasks calling `pnpm` | No Node and no pnpm anywhere; `bun` is the only JavaScript dependency, and `turbo`/`biome` are Bun workspace packages | [ADR-010](../decisions/010-bun-not-node.md) |
+> | `[feature.web]` with `nodejs = "22.*"` and `pnpm = ">=9"`, and `web-*` tasks calling `pnpm` | No Node and no pnpm anywhere; `bun` is the only JavaScript dependency, and `turbo`/`biome` are Bun workspace packages | [ADR-010](../../backlog/docs/decisions/010-bun-not-node.md) |
 > | Six environments (`default`, `full`, `web`, `python`, `wasm`, `ci`) | One environment, `default`, composed of six *features* (`rust`, `js`, `python`, `engines`, `build`, `utils`) | Each extra environment is a separate solve and a separate sandbox bundle to pack, verify and publish; none has code to build yet |
 > | `[feature.openmvs] openmvs = ">=2.2"` | OpenMVS is not a dependency; `pixi run build-openmvs` builds it from source | `openmvs` has no conda-forge package for linux-64 at all — a manifest naming it fails to solve |
 > | `colmap = ">=3.9"` | `colmap = { version = ">=3.9", build = "cpu_*" }` | The default build string resolves to `cuda_126` and drags a GPU stack into CI runners with no GPU |
@@ -323,6 +323,6 @@ OpenMVS may not be available on conda-forge for all platforms. Options:
 
 ## See Also
 
-- [ADR-006: Pixi for dependencies](../decisions/006-pixi-for-dependency-management.md)
+- [ADR-006: Pixi for dependencies](../../backlog/docs/decisions/006-pixi-for-dependency-management.md)
 - [Docker strategy](./docker-strategy.md) — Pixi-based Dockerfile
 - [Dependency matrix](../references/dependency-matrix.md) — versions

@@ -31,6 +31,9 @@ dist/
 # workspace's target directory goes, and a rule that only covers the current location is
 # a rule that fails on the next layout.
 /target/
+# Native SDK build products are recreated by Maturin and Cargo.
+*.so
+*.node
 target/
 # COG/orthomosaic outputs written next to the pipeline definition. These are the products
 # of a run over a 1,284-image dataset; they are hundreds of MB each and are reproducible

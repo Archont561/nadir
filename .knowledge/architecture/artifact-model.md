@@ -8,8 +8,8 @@ status: stable
 related:
   - overview.md
   - pipeline-dag.md
-  - ../implementation/core-types.md
-  - ../decisions/001-step-scoped-vs-odm-monolith.md
+  - ../../crates/core/README.md
+  - ../../backlog/docs/decisions/001-step-scoped-vs-odm-monolith.md
 ---
 
 # Artifact Model
@@ -405,5 +405,5 @@ This means: same inputs + same config + same engine versions = same outputs.
 ## See Also
 
 - [Pipeline & DAG](./pipeline-dag.md) — how tasks consume artifacts
-- [Core types](../implementation/core-types.md) — Rust struct definitions
+- [Core types](../../crates/core/README.md) — Rust struct definitions
 - [Overview](./overview.md) — the artifact-first principle

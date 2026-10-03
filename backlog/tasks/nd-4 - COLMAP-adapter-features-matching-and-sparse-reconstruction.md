@@ -14,7 +14,7 @@ dependencies:
   - ND-3
 references:
   - .knowledge/photogrammetry/colmap-integration.md
-  - .knowledge/decisions/007-engine-trait-api-surface.md
+  - backlog/docs/decisions/007-engine-trait-api-surface.md
 priority: high
 ordinal: 4000
 ---

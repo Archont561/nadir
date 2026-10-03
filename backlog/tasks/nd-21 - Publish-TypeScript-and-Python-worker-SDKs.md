@@ -10,8 +10,8 @@ labels:
   - protocol
 dependencies: []
 references:
-  - .knowledge/roadmap/v2-scale.md
-  - .knowledge/decisions/002-three-language-split.md
+  - backlog/docs/roadmaps/v2-scale.md
+  - backlog/docs/decisions/002-three-language-split.md
   - .knowledge/architecture/worker-protocol.md
 priority: low
 type: feature

@@ -7,8 +7,8 @@ last_updated: 2025-02-23
 status: stable
 related:
   - docker-strategy.md
-  - demo-plan.md
-  - ../decisions/004-inverted-container-no-dind.md
+  - ../../backlog/docs/plans/demo-plan.md
+  - ../../backlog/docs/decisions/004-inverted-container-no-dind.md
 ---
 
 # Hosting Comparison
@@ -166,5 +166,5 @@ Monthly cost: ~$80–150
 ## See Also
 
 - [Docker strategy](./docker-strategy.md) — container model for each platform
-- [Demo plan](./demo-plan.md) — 4-week demo using Railway + Vercel
-- [ADR-004: Inverted container](../decisions/004-inverted-container-no-dind.md)
+- [Demo plan](../../backlog/docs/plans/demo-plan.md) — 4-week demo using Railway + Vercel
+- [ADR-004: Inverted container](../../backlog/docs/decisions/004-inverted-container-no-dind.md)

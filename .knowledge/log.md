@@ -1,7 +1,7 @@
 # Nadir Knowledge Bundle Update Log
 
 ## 2026-09-30
-* **New**: [ADR-010: Bun, Not Node](decisions/010-bun-not-node.md) — written because
+* **New**: [ADR-010: Bun, Not Node](../backlog/docs/decisions/010-bun-not-node.md) — written because
   `pixi.toml`, `AGENTS.md` and ADR-006 all cited it before it existed; ADR-006's link to
   `010-bun-not-node.md` was dangling.
 * **Index**: Added ADR-009 and ADR-010 to the [bundle index](index.md) and to the ADR table

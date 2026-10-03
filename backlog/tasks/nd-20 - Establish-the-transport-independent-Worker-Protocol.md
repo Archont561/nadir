@@ -11,7 +11,7 @@ labels:
 dependencies: []
 references:
   - .knowledge/architecture/worker-protocol.md
-  - .knowledge/roadmap/v2-scale.md
+  - backlog/docs/roadmaps/v2-scale.md
 priority: low
 type: feature
 ordinal: 20000

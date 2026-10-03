@@ -9,7 +9,7 @@ related:
   - pipeline-stages.md
   - geospatial-stack.md
   - ../architecture/engine-registry.md
-  - ../decisions/001-step-scoped-vs-odm-monolith.md
+  - ../../backlog/docs/decisions/001-step-scoped-vs-odm-monolith.md
 ---
 
 # Engine Assignment

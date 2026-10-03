@@ -10,7 +10,7 @@ labels:
   - executor
 dependencies: []
 references:
-  - .knowledge/roadmap/v1-platform.md
+  - backlog/docs/roadmaps/v1-platform.md
   - .knowledge/architecture/overview.md
 priority: medium
 type: feature

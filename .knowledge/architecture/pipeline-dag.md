@@ -9,8 +9,8 @@ related:
   - overview.md
   - artifact-model.md
   - engine-registry.md
-  - ../implementation/config-model.md
-  - ../decisions/001-step-scoped-vs-odm-monolith.md
+  - overview.md
+  - ../../backlog/docs/decisions/001-step-scoped-vs-odm-monolith.md
 ---
 
 # Pipeline & DAG Executor
@@ -564,5 +564,5 @@ Estimated time      ~2h 30m
 
 - [Artifact model](./artifact-model.md) — caching and hashing
 - [Engine registry](./engine-registry.md) — engine resolution
-- [Config model](../implementation/config-model.md) — layered configuration
-- [QC & adaptive](../implementation/qc-and-adaptive.md) — adaptive planning
+- [Config model](overview.md) — layered configuration
+- [QC & adaptive](overview.md) — adaptive planning

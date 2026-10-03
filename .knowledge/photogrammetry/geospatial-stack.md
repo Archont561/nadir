@@ -8,7 +8,7 @@ status: stable
 related:
   - engine-assignment.md
   - ../architecture/five-domains.md
-  - ../decisions/006-pixi-for-dependency-management.md
+  - ../../backlog/docs/decisions/006-pixi-for-dependency-management.md
 ---
 
 # Geospatial Stack

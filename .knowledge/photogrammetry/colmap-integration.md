@@ -9,7 +9,7 @@ related:
   - engine-assignment.md
   - openmvs-integration.md
   - ../architecture/engine-registry.md
-  - ../implementation/process-runner.md
+  - ../architecture/engine-registry.md
 ---
 
 # COLMAP Integration
@@ -553,5 +553,5 @@ fn get_match_count(db_path: &Path) -> Result<usize> {
 
 - [OpenMVS integration](./openmvs-integration.md) — the next stage after COLMAP
 - [Engine assignment](./engine-assignment.md) — why COLMAP for SfM
-- [Process runner](../implementation/process-runner.md) — subprocess management
+- [Process runner](../architecture/engine-registry.md) — subprocess management
 - [Engine registry](../architecture/engine-registry.md) — trait implementation

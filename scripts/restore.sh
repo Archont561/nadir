@@ -28,6 +28,12 @@ if [ -z "$BRANCH" ] && [ -r "$CONFIG" ]; then
   fi
 fi
 BRANCH=${BRANCH:-$DEFAULT_BRANCH}
+# Shallow and single-branch clones do not have sandbox refs. Fetch exactly the selected
+# transport branch instead of requiring users to know the clone's refspec.
+if ! git -C "$ROOT" rev-parse --verify "$BRANCH^{commit}" >/dev/null 2>&1 &&
+   ! git -C "$ROOT" rev-parse --verify "origin/$BRANCH^{commit}" >/dev/null 2>&1; then
+  git -C "$ROOT" fetch origin "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+fi
 if ! git -C "$ROOT" rev-parse --verify "$BRANCH^{commit}" >/dev/null 2>&1; then BRANCH=origin/$BRANCH; fi
 TRANSPORT="$ROOT/.pixi/.restore-transport"
 rm -rf "$TRANSPORT"

@@ -9,7 +9,7 @@ related:
   - colmap-integration.md
   - engine-assignment.md
   - ../architecture/engine-registry.md
-  - ../implementation/process-runner.md
+  - ../architecture/engine-registry.md
 ---
 
 # OpenMVS Integration
@@ -409,5 +409,5 @@ enabled.
 
 - [COLMAP integration](./colmap-integration.md) — the upstream engine
 - [Engine assignment](./engine-assignment.md) — why OpenMVS for MVS
-- [Process runner](../implementation/process-runner.md) — subprocess management
+- [Process runner](../architecture/engine-registry.md) — subprocess management
 - [Pipeline & DAG](../architecture/pipeline-dag.md) — how dense fits in the DAG

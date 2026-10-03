@@ -8,8 +8,8 @@ status: stable
 related:
   - hosting-comparison.md
   - pixi-setup.md
-  - ../decisions/004-inverted-container-no-dind.md
-  - ../decisions/005-worker-topology-per-step.md
+  - ../../backlog/docs/decisions/004-inverted-container-no-dind.md
+  - ../../backlog/docs/decisions/005-worker-topology-per-step.md
 ---
 
 # Docker Strategy
@@ -29,7 +29,7 @@ they don't expose a Docker daemon socket or privileged container access.
 The initial design had the Rust worker spawning `docker run opendronemap/odm`.
 This fails on all major PaaS platforms with `permission denied`.
 
-See [ADR-004](../decisions/004-inverted-container-no-dind.md) for the full
+See [ADR-004](../../backlog/docs/decisions/004-inverted-container-no-dind.md) for the full
 decision rationale.
 
 ## The Inverted Container Model
@@ -270,7 +270,7 @@ transfer between workers.
 
 ## See Also
 
-- [ADR-004: Inverted container](../decisions/004-inverted-container-no-dind.md)
-- [ADR-005: Per-step workers](../decisions/005-worker-topology-per-step.md)
+- [ADR-004: Inverted container](../../backlog/docs/decisions/004-inverted-container-no-dind.md)
+- [ADR-005: Per-step workers](../../backlog/docs/decisions/005-worker-topology-per-step.md)
 - [Hosting comparison](./hosting-comparison.md)
 - [Pixi setup](./pixi-setup.md)
