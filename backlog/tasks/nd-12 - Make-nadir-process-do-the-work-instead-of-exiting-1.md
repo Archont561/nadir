@@ -12,7 +12,7 @@ dependencies:
   - ND-9
   - ND-11
 references:
-  - .knowledge/roadmap/v0-mvp.md
+  - backlog/docs/roadmaps/v0-mvp.md
   - .knowledge/context.md
 priority: high
 ordinal: 12000

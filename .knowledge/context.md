@@ -61,7 +61,7 @@ aerial image.
 
 | Layer | Technology |
 |---|---|
-| Language | Rust (primary), TypeScript (SDK/UI), Python (future plugins) |
+| Language | Rust (core), TypeScript and Python (native SDK faces) |
 | Build | Cargo workspace + Pixi (system deps via conda-forge) |
 | Async | Tokio (subprocesses, I/O) + Rayon (CPU parallelism) |
 | CLI | clap |
@@ -85,16 +85,17 @@ aerial image.
 |---|---|---|
 | 001 | Step-scoped tools over ODM monolith | Caching, resume, parallelism, engine swapping |
 | 002 | Three-language split (TS/Rust/Python) | TS for SDK/UI, Rust for worker, Python for future plugins |
-| 003 | No Python adapter for MVP | Rust calls engines directly via subprocess; ~50 lines of arg mapping |
+| 003 | No Python engine adapter for MVP (superseded by 011 for SDK bindings) | Rust still calls external engines directly |
 | 004 | Inverted container (no Docker-in-Docker) | PaaS hosts don't allow DinD; container IS the ODM environment |
 | 005 | Per-step worker topology | Fat worker (V0) → domain workers (V1) → step workers (V2) |
 | 006 | Pixi for dependency management | Single `pixi.toml` replaces apt/brew/rustup/nvm/Dockerfile RUN |
 | 007 | 16-trait engine API surface | Small traits, small configs, big adapters |
 | 008 | WASM/edge/browser strategy | Rust → wasm32 for browser preview, edge tiling, serverless post-processing |
+| 011 | Shared transport and thin native bindings | PyO3 and N-API expose one versioned JSON-in/JSON-out dispatcher |
 
 ## Current Status
 
-- **Phase:** Pre-implementation. Architecture fully designed.
+- **Phase:** Early scaffold. CLI shell and native SDK transport compile; pipeline execution is pending.
 - **Next step:** V0.1 MVP — Rust CLI + COLMAP + OpenMVS + GDAL + `nadir serve` mode.
 - **Target demo:** 4 weeks. Railway hosting. Next.js UI. Real drone imagery.
 - **Estimated V0.1 timeline:** 3–4 weeks solo, full-time.

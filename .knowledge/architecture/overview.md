@@ -6,12 +6,12 @@ purpose: Big-picture system design — 5 domains, 3 dependency tiers, build syst
 last_updated: 2025-02-23
 status: stable
 related:
-  - /context.md
+  - ../context.md
   - five-domains.md
   - engine-registry.md
   - pipeline-dag.md
   - artifact-model.md
-  - ../decisions/001-step-scoped-vs-odm-monolith.md
+  - ../../backlog/docs/decisions/001-step-scoped-vs-odm-monolith.md
 ---
 
 # Architecture Overview
@@ -322,4 +322,4 @@ without ever redesigning the core architecture.
 - [Pipeline & DAG](./pipeline-dag.md) — how the DAG executor works
 - [Artifact model](./artifact-model.md) — hashing, caching, provenance
 - [Worker protocol](./worker-protocol.md) — distributed execution
-- [Full roadmap](../roadmap/full-roadmap.md) — V0→V3 checklist
+- [Full roadmap](../../backlog/docs/roadmaps/full-roadmap.md) — V0→V3 checklist

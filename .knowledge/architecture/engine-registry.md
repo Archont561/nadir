@@ -8,7 +8,7 @@ status: stable
 related:
   - overview.md
   - five-domains.md
-  - ../decisions/007-engine-trait-api-surface.md
+  - ../../backlog/docs/decisions/007-engine-trait-api-surface.md
   - ../photogrammetry/engine-assignment.md
 ---
 
@@ -479,7 +479,7 @@ impl DenseReconstructor for OpenMvsEngine {
 
 ## See Also
 
-- [ADR-007: Engine trait API surface](../decisions/007-engine-trait-api-surface.md) — why 16 traits
+- [ADR-007: Engine trait API surface](../../backlog/docs/decisions/007-engine-trait-api-surface.md) — why 16 traits
 - [Five domains](./five-domains.md) — domain-level detail
 - [Engine assignment](../photogrammetry/engine-assignment.md) — which tool does what
 - [COLMAP integration](../photogrammetry/colmap-integration.md) — COLMAP adapter detail

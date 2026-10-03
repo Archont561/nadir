@@ -9,8 +9,8 @@ related:
   - overview.md
   - engine-registry.md
   - artifact-model.md
-  - ../decisions/005-worker-topology-per-step.md
-  - ../roadmap/v2-scale.md
+  - ../../backlog/docs/decisions/005-worker-topology-per-step.md
+  - ../../backlog/docs/roadmaps/v2-scale.md
 ---
 
 # Worker Protocol
@@ -379,7 +379,7 @@ Optimization:
 
 ## See Also
 
-- [ADR-005: Per-step worker topology](../decisions/005-worker-topology-per-step.md)
+- [ADR-005: Per-step worker topology](../../backlog/docs/decisions/005-worker-topology-per-step.md)
 - [Engine registry](./engine-registry.md) — what workers can execute
 - [Artifact model](./artifact-model.md) — what flows between workers
-- [V2 roadmap](../roadmap/v2-scale.md) — when protobuf and distribution arrive
+- [V2 roadmap](../../backlog/docs/roadmaps/v2-scale.md) — when protobuf and distribution arrive

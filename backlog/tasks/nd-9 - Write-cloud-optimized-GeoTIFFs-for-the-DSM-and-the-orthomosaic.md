@@ -12,7 +12,7 @@ dependencies:
   - ND-8
 references:
   - .knowledge/photogrammetry/geospatial-stack.md
-  - .knowledge/roadmap/v0-mvp.md
+  - backlog/docs/roadmaps/v0-mvp.md
 priority: medium
 ordinal: 9000
 ---

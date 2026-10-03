@@ -7,7 +7,7 @@ last_updated: 2026-09-30
 status: stable
 related:
   - sources.md
-  - ../decisions/006-pixi-for-dependency-management.md
+  - ../../backlog/docs/decisions/006-pixi-for-dependency-management.md
 ---
 
 # Dependency Matrix
@@ -104,7 +104,7 @@ related:
 > `nodejs = "22.*"` and `pnpm = ">=9"` under a `web` environment described the design-era
 > plan; Bun is the runtime, the package manager and the test runner, and there is one
 > environment (`default`) rather than a per-feature set of them. See
-> [ADR-010](../decisions/010-bun-not-node.md). Versions above are the pins in
+> [ADR-010](../../backlog/docs/decisions/010-bun-not-node.md). Versions above are the pins in
 > [`/pixi.toml`](../../pixi.toml), which is authoritative.
 
 ## Infrastructure (V2.0+)
@@ -122,4 +122,4 @@ related:
 
 - [Sources](./sources.md) — documentation links
 - [Pixi setup](../deployment/pixi-setup.md) — how these are installed
-- [ADR-006: Pixi](../decisions/006-pixi-for-dependency-management.md)
+- [ADR-006: Pixi](../../backlog/docs/decisions/006-pixi-for-dependency-management.md)

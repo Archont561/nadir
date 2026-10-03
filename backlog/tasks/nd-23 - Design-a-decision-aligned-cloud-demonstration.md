@@ -10,10 +10,10 @@ labels:
   - spike
 dependencies: []
 references:
-  - .knowledge/deployment/demo-plan.md
+  - backlog/docs/plans/demo-plan.md
   - .knowledge/deployment/hosting-comparison.md
-  - .knowledge/decisions/004-inverted-container-no-dind.md
-  - .knowledge/decisions/010-bun-not-node.md
+  - backlog/docs/decisions/004-inverted-container-no-dind.md
+  - backlog/docs/decisions/010-bun-not-node.md
 priority: low
 type: feature
 ordinal: 23000

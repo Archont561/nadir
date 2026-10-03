@@ -2,7 +2,7 @@
   "name": "@nadir/client",
   "version": "0.1.0",
   "private": true,
-  "description": "Browser-facing client for the nadir pipeline API",
+  "description": "TypeScript convenience client for the nadir engine",
   "license": "MIT",
   "type": "module",
   "main": "./src/index.ts",

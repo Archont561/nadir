@@ -1,67 +1,75 @@
 # nadir
 
-Artifact-driven photogrammetry pipeline engine.
+Rust-native, artifact-driven photogrammetry with first-class Python and TypeScript bindings.
 
-> **Status: scaffold.** The binary links, parses and reports: `nadir engines`, `plan`,
-> `crates` and a counting `inspect` work; `process` fails on purpose, and `serve` does not
-> exist yet. Every crate is one constant, one function and two tests — plus a drafted type
-> vocabulary in `crates/core/src/` that `lib.rs` does not declare yet, so it is not
-> compiled. What is finished is the *build*: the lockfiles, the task graph, the gates, the
-> offline transport and the publish pipeline that the real implementation will be written
-> into.
+> **Status: early scaffold.** The workspace, CLI shell, versioned FFI transport, PyO3
+> extension, and N-API addon compile and are covered by contract tests. Pipeline execution
+> is not implemented yet: `nadir process` fails explicitly rather than pretending to run.
 
-Nadir turns overlapping drone photographs into georeferenced orthomosaics, DSMs, DTMs,
-point clouds and 3D meshes by orchestrating external engines — COLMAP, OpenMVS, GDAL, PROJ,
-PDAL — through a declarative DAG with content-addressed caching.
+Nadir is designed to turn overlapping aerial images into georeferenced point clouds,
+meshes, DSMs, DTMs, and orthomosaics. Rust owns the domain model and orchestration;
+step-scoped engines such as COLMAP, OpenMVS, GDAL, PROJ, and PDAL perform specialized
+reconstruction and geospatial work.
 
-## What is here
+## Why Nadir
 
-| Layer | Path | What it is |
-| --- | --- | --- |
-| CLI | `crates/cli/` | the `nadir` binary's sources; its manifest is the repository root |
-| Rust crates | `crates/*/` | ten workspace members, one directory each |
-| TypeScript | `packages/sdk`, `packages/client` | the wire-contract client and the browser layer over it |
-| Python | `python/nadir/` | pure-Python SDK for notebooks, CI jobs and web backends |
-| Backlog | `backlog/` | the V0.1 work as Markdown tasks (nd-1 … nd-14, milestone m-0) |
-| Knowledge | `.knowledge/` | the ADRs, architecture notes, dependency matrix and roadmap |
-| Tooling | `pixi.toml`, `turbo.json`, `biome.json`, `deny.toml`, `lefthook.yml` | one source of truth per kind of thing |
+- **Build system, not a job queue.** Tasks transform immutable artifacts into artifacts.
+- **Content-addressed results.** Inputs, normalized parameters, and engine versions determine
+  cache identity, making incremental rebuilds and resume natural properties.
+- **Step-scoped engines.** Each stage can be cached, replaced, retried, or scheduled
+  independently instead of hiding the pipeline behind one monolithic subprocess.
+- **One Rust implementation.** Python and TypeScript are thin native faces over the same
+  versioned transport and dispatcher; domain behavior is not reimplemented per language.
+- **Reproducible tooling.** Pixi owns Rust, Bun, Python, native engines, and repository tools
+  in one locked environment, with an offline sandbox transport for air-gapped machines.
 
-The repository root is both the Cargo workspace manifest and the `nadir-cli` package, and
-`pixi.toml` is both the pixi workspace manifest and the `nadir-cli` conda package. Both
-merges exist for the same reason: `pixi-build-rust` builds a package with
-`cargo install --locked --path <dir>`, and `cargo install` cannot install from a virtual
-manifest (ADR-009). `crates/cli/` therefore has no manifest of its own — it is reached
-through `[[bin]] path` — and is excluded from the `crates/*` members glob.
+## Architecture
 
-What the crates will own:
+```text
+                         ┌──────────────────────────┐
+Python ─ PyO3 adapter ───┤                          │
+                         │  versioned JSON protocol ├─ dispatcher ─ Rust core
+TypeScript ─ N-API addon ┤                          │                 │
+                         └──────────────────────────┘                 ▼
+                                                              pipeline crates
+                                                                    │
+                                      COLMAP · OpenMVS · GDAL · PROJ · PDAL
+```
 
-| Crate | Owns |
+Each native adapter exports one operation: JSON text in, JSON text out. The transport is
+versioned in `nadir-protocol`; `nadir-engine` validates and dispatches it; domain rules stay
+in `nadir-core` and the stage crates. Adding an operation changes the protocol and one Rust
+dispatcher, not every native ABI.
+
+See [the binding architecture](.knowledge/architecture/language-bindings.md) and
+[the Rust workspace guide](crates/README.md).
+
+## Repository layout
+
+| Path | Responsibility |
 | --- | --- |
-| `nadir-core` | the shared vocabulary: engine traits, artifact identity, pipeline types |
-| `nadir-artifacts` | content-addressed artifact storage and the invalidation rules it makes possible |
-| `nadir-pipeline` | declarative TOML pipelines and the DAG they validate into |
-| `nadir-executor` | topological execution with concurrent branches and resumable runs |
-| `nadir-dataset` | image ingest, EXIF, GPS and camera models |
-| `nadir-reconstruction` | COLMAP and OpenMVS adapters, one focused subprocess per stage |
-| `nadir-geometry` | CRS transforms and the Umeyama georeferencing fit from ground control points |
-| `nadir-surface` | point-cloud filtering, classification, DSM and DTM generation |
-| `nadir-cartography` | orthorectification, mosaicking and Cloud-Optimized GeoTIFF output |
-| `nadir-math` | pure-Rust linear algebra and interpolation (the wasm32 target of ADR-008) |
+| `crates/core` | shared domain vocabulary and engine traits |
+| `crates/protocol` | versioned request and response envelopes |
+| `crates/engine` | shared operation dispatcher |
+| `crates/python-native` | thin PyO3 adapter |
+| `crates/node-native` | thin N-API adapter |
+| `crates/{artifacts,pipeline,executor}` | caching, declarative DAGs, and execution |
+| `crates/{dataset,reconstruction,geometry,surface,cartography,math}` | photogrammetry domains |
+| `crates/cli` | `nadir` command sources; the manifest is the repository root |
+| `python/nadir` | native Python SDK built with Maturin |
+| `packages/sdk` | native TypeScript SDK |
+| `packages/client` | higher-level TypeScript convenience client |
+| `backlog` | tasks, milestones, decisions, roadmaps, and delivery plans |
+| `.knowledge` | durable architecture, domain, deployment, and dependency reference |
 
-Three files in `crates/core/src/` are drafted ahead of the rest: `engine.rs` (the sixteen
-engine traits of ADR-007, capabilities, progress, errors), `artifact.rs` (blake3 content
-addressing and the artifact store) and `pipeline.rs` (task declarations, DAG validation,
-execution order). They are written but not wired — `lib.rs` declares none of them, so they
-are neither compiled nor tested, and the dependencies they need are not in `Cargo.lock`
-yet. Wiring them in is the first stretch of the V0.1 backlog (nd-1, nd-2, nd-10, nd-11).
+The root `Cargo.toml` is both the Cargo workspace and the publishable `nadir-cli` package.
+The root `pixi.toml` is likewise both the Pixi workspace and Conda package manifest. This
+layout is required because `pixi-build-rust` invokes `cargo install --path`, which cannot
+select a member from a virtual manifest.
 
-The pipeline stages those crates serve, in the order `nadir plan` prints them:
-`ingest, features, matching, sfm, georef, dense, dsm, dtm, ortho`.
+## Set up
 
-## Get set up
-
-Pixi is the only prerequisite. It provisions Rust, Bun, Python, the geospatial engines and
-every task runner from `pixi.lock`.
+Pixi is the only prerequisite:
 
 ```sh
 curl -fsSL https://pixi.sh/install.sh | bash
@@ -69,101 +77,86 @@ pixi install --locked
 pixi run setup
 ```
 
-`pixi.toml` requires pixi ≥ 0.81.0 and records one environment, `default`, for `linux-64`
-only. There is no Node.js and no pnpm anywhere: Bun is the JavaScript runtime, package
-manager and test runner, and the reason is a recorded decision (ADR-010), restated in
-`pixi.toml`.
+`setup` installs the Bun workspace, builds the native Python package in editable mode, and
+installs Git hooks. The locked default environment targets `linux-64` and includes the
+Rust, Bun, Python, C/C++, and photogrammetry toolchains.
 
-Or open the repository in a devcontainer and wait — `.devcontainer/devcontainer.json` runs
-the two commands above and then reports what it found.
+### Offline restore
 
-## Use it
+The published sandbox contains the environment and vendored Cargo sources:
 
 ```sh
-pixi run gates          # every check that must pass before a commit lands
-pixi run ci             # gates plus the build
-pixi run build          # the binary and every package
-pixi run test           # 26 Rust tests, 2 pytest, 2 bun test
-pixi run lint           # clippy + cargo-deny + ruff + biome
-pixi run fmt            # rewrite with each formatter
-pixi run advisories     # RustSec + licence scan; needs the network, so not in gates
+bash scripts/restore.sh       # PowerShell: scripts/restore.ps1
+source .pixi/sandbox-env.sh
+pixi install --frozen --offline
+cargo build --offline
 ```
 
-`gates` is `lint`, `typecheck`, `test`, `lint-actions` (actionlint), `version-check` and
-`publish-plan`. The CI workflow adds to it the build, a smoke test of the release binary
-installed the way `pixi publish` installs it, a validation of the sandbox publish plan, and
-the network-dependent advisory scan as its own job.
+The restore script fetches the selected `sandbox/<bundle>-<platform>` branch when a shallow
+clone does not already contain it, verifies every blob, and materializes the environment.
 
-The CLI itself:
+## Develop
 
 ```sh
-cargo run -- engines    # which external engines are on PATH, at which versions
-cargo run -- plan       # the nine stages in order; the graph is V0.1, this is an ordering
-cargo run -- inspect D  # count the images in a dataset directory
-cargo run -- crates     # every workspace crate and the stage it claims
-cargo run -- process D  # exit 1 on purpose, until the V0.1 pipeline lands
+pixi run gates          # lint, type-check, test, workflow lint, versions, publish plan
+pixi run ci             # gates plus builds
+pixi run build          # Rust and language packages
+pixi run test           # Rust, Python, and Bun contract tests
+pixi run fmt            # rustfmt, Ruff, and Biome
+pixi run advisories     # network-dependent dependency advisories
 ```
 
-`engines` in a working environment, real output:
-
-```
-Engines:
-  colmap           COLMAP 3.13.0 -- Structure-from-Motion and Multi-View Stereo
-  pdal             pdal 2.9.3 (git-version: fa4ad9)
-  gdal             GDAL 3.12.2 "Chicoutimi", released 2026/02/03
-  proj             Rel. 9.7.1, December 1st, 2025
-  opencv_version   Usage: opencv_version [params]
-  openmvs          no conda-forge package; see `pixi run build-openmvs`
-```
-
-## No network? Use the sandbox
-
-A packed transport lives on the `sandbox/developer-linux-64` orphan branch of this
-repository, repacked and pushed by CI on every push to `main`. On a machine with no
-network at all:
+Useful CLI probes while the processing pipeline is being implemented:
 
 ```sh
-bash scripts/restore.sh        # scripts/restore.ps1 on Windows
+cargo run -- engines    # report available external engines
+cargo run -- plan       # print the planned stage ordering
+cargo run -- inspect D  # count images in a dataset directory
+cargo run -- crates     # report workspace stage ownership
+cargo run -- process D  # intentionally fails until execution lands
 ```
 
-It verifies every blob against the manifest and unpacks both the environment and the
-vendored crate sources (`cargo_vendor = true`), so the workspace builds offline and not
-merely runs. A restore today materialises about 1.2 GiB — the `default` environment plus
-54 vendored crates — writes `.cargo/config.toml` pointing cargo at them, and after it,
-`pixi install --frozen --offline` is a no-op and `cargo build --offline` works. Locally:
+## Bindings
 
-```sh
-pixi run sandbox-pack      # build a transport
-pixi run sandbox-doctor    # verify it without writing anything
-pixi run lint-sandbox-plan # check the publish plan (a CI job, not a gate)
+Both SDKs currently expose transport-level probes—`ping`, `version`, and `describe`—that
+cross a real native boundary and return results from the shared Rust engine. Pipeline
+operations will grow on this same contract.
+
+```python
+import nadir
+
+assert nadir.ping("python") == "python"
+print(nadir.version())
+print(nadir.describe())
 ```
 
-Never run `sandbox-publish` without reading the plan first. It writes a branch to `origin`.
+```ts
+import { describe, ping, version } from "@nadir/sdk";
+
+console.log(ping("typescript"));
+console.log(version());
+console.log(describe());
+```
+
+## Project records
+
+Use `pixi run backlog task list --plain` to inspect current work. The `backlog/` directory
+owns change over time:
+
+- `tasks/` and `milestones/` are Backlog.md records;
+- `docs/decisions/` contains ADR-001 through ADR-010;
+- `docs/roadmaps/` contains version plans;
+- `docs/plans/` contains time-bound delivery plans.
+
+The `.knowledge/` bundle is intentionally limited to durable technical reference. Start
+with [project context](.knowledge/context.md) or [the knowledge index](.knowledge/index.md).
 
 ## Publishing
 
-`pixi.toml` doubles as the `nadir-cli` conda package manifest, so `pixi publish` builds
-the binary with the same pinned toolchain the lockfile gives a developer. Two tasks, and
-the split is the point: `publish-plan` resolves and validates the publish set without
-building (it is a gate), and `publish-dist` builds the `.conda` archives into `dist/`.
-Neither uploads — nothing reaches a channel without an explicit `--channel`, which no task
-passes. Publishing is a deliberate, separate act.
+`pixi run publish-plan` validates the Conda publish set without uploading. `pixi run
+publish-dist` writes packages to `dist/`. Publishing is deliberately separate from building
+and requires an explicit destination channel.
 
-## OpenMVS
-
-There is no conda-forge package for OpenMVS, and a manifest naming one fails to solve. It
-is therefore not a dependency of anything; `pixi run build-openmvs` compiles it from source
-into the environment. A binary installed that way is only offline-restorable if a
-`sandbox-pack` ran afterwards.
-
-## Working on it
-
-Read `AGENTS.md` before changing the layout — most of the arrangement is a consequence of
-one constraint (`cargo install` cannot install from a virtual manifest) or one source of
-truth per kind of thing, and both are easy to break by accident.
-
-The work is tracked in `backlog/` — `pixi run backlog task list --plain`. Milestone m-0 is
-V0.1, the minimum viable pipeline: ingest, COLMAP, georeferencing, a DSM and a
-cloud-optimized orthomosaic, driven by a cached DAG, ending with `nadir process` doing the
-work instead of exiting 1. `.knowledge/` holds the architecture decisions (ADR-001 …
-ADR-010), the dependency matrix and the roadmap.
+OpenMVS is the exception to the locked Conda stack because no conda-forge package exists.
+`pixi run build-openmvs` builds it from source; repack the sandbox afterward if that binary
+must be available offline.

@@ -123,6 +123,15 @@ dbg_macro = "warn"
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
 thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Native language bindings. Both expose the same versioned JSON transport rather than
+# copying the core API into language-specific signatures.
+pyo3 = { version = "0.24", features = ["abi3-py313"] }
+napi = { version = "3.14", default-features = false, features = ["napi4", "dyn-symbols"] }
+napi-derive = "3.6"
+napi-build = "2.6"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
@@ -170,6 +179,11 @@ nadir-geometry = { path = "crates/geometry", version = "0.1.0" }
 nadir-surface = { path = "crates/surface", version = "0.1.0" }
 nadir-cartography = { path = "crates/cartography", version = "0.1.0" }
 nadir-math = { path = "crates/math", version = "0.1.0" }
+# One transport and one dispatcher sit between core and every FFI adapter.
+nadir-protocol = { path = "crates/protocol", version = "0.1.0" }
+nadir-engine = { path = "crates/engine", version = "0.1.0" }
+nadir-python-native = { path = "crates/python-native", version = "0.1.0" }
+nadir-node-native = { path = "crates/node-native", version = "0.1.0" }
 
 # ── package ─────────────────────────────────────────────────────────────────
 # This package is the `nadir` binary. The package name is not the binary name: as a conda

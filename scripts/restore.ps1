@@ -22,7 +22,14 @@ if (-not $Branch -and (Test-Path $Config)) {
 }
 if (-not $Branch) { $Branch = $DefaultBranch }
 git -C $Root rev-parse --verify "$Branch^{commit}" 2>$null | Out-Null
-if ($LASTEXITCODE -ne 0) { $Branch = "origin/$Branch" }
+if ($LASTEXITCODE -ne 0) {
+    git -C $Root rev-parse --verify "origin/$Branch^{commit}" 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        git -C $Root fetch origin "refs/heads/$Branch`:refs/remotes/origin/$Branch"
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+    $Branch = "origin/$Branch"
+}
 $Transport = Join-Path $Root '.pixi/.restore-transport'
 $Archive = Join-Path $Root '.pixi/.restore-transport.tar'
 Remove-Item -Recurse -Force $Transport,$Archive -ErrorAction SilentlyContinue

@@ -12,7 +12,7 @@ milestone: m-0
 dependencies:
   - ND-11
 references:
-  - .knowledge/decisions/005-worker-topology-per-step.md
+  - backlog/docs/decisions/005-worker-topology-per-step.md
   - .knowledge/deployment/docker-strategy.md
 priority: medium
 ordinal: 13000

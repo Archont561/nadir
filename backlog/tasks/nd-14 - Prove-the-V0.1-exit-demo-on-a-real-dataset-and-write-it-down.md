@@ -11,7 +11,7 @@ milestone: m-0
 dependencies:
   - ND-12
 references:
-  - .knowledge/roadmap/v0-mvp.md
+  - backlog/docs/roadmaps/v0-mvp.md
   - .knowledge/log.md
 priority: medium
 ordinal: 14000

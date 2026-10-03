@@ -10,7 +10,7 @@ labels:
   - cartography
 dependencies: []
 references:
-  - .knowledge/roadmap/v2-scale.md
+  - backlog/docs/roadmaps/v2-scale.md
   - .knowledge/photogrammetry/engine-assignment.md
 priority: low
 type: feature

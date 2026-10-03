@@ -1,0 +1,33 @@
+[package]
+name = "nadir-node-native"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "N-API adapter for the nadir TypeScript SDK"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+nadir-engine.workspace = true
+napi.workspace = true
+napi-derive.workspace = true
+
+[build-dependencies]
+napi-build.workspace = true
+
+# napi's generated module constructor contains the boundary's required unsafe code. Keep
+# handwritten unsafe denied while allowing the macro expansion to compile.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+todo = "warn"
+unimplemented = "warn"
+dbg_macro = "warn"

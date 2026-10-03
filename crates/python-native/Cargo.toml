@@ -1,0 +1,24 @@
+[package]
+name = "nadir-python-native"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "PyO3 adapter for the nadir Python SDK"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+nadir-engine.workspace = true
+pyo3.workspace = true
+
+[features]
+extension-module = ["pyo3/extension-module"]
+
+[lints]
+workspace = true
