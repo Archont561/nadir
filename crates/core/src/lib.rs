@@ -1,14 +1,13 @@
 //! nadir-core — The types every crate shares: the 16 engine traits, artifact identity, pipeline declaration.
 //!
-//! **Scaffold.** One constant and one function, so the crate compiles, links into the
-//! workspace, and has a test that fails if the wiring is broken. The real content arrives
-//! with the stage named by [`STAGE`].
-//!
 //! Declared as a workspace member with its own `Cargo.toml` rather than as a directory of
 //! `.rs` files, because a crate that is not a member is not compiled by `cargo build
 //! --workspace`, is not in `Cargo.lock`, and is not in the licence report `pixi run lint`
 //! produces. Adding a crate is one file in its own directory; the workspace notices
 //! (`members = ["crates/*"]` in the repository-root `Cargo.toml`).
+
+/// Artifact identity, task hashing, stable JSON metadata, and the local artifact store.
+pub mod artifact;
 
 /// The pipeline stage this crate exists to implement, as it appears in a pipeline file.
 ///

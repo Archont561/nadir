@@ -1,9 +1,8 @@
 # nadir-core — The types every crate shares: the 16 engine traits, artifact identity, pipeline declaration.
 #
-# A workspace member with no dependencies yet. The stage's real dependencies are listed in
-# `.knowledge/references/dependency-matrix.md` and belong here when the stage is written;
-# an unused dependency is a download every `pixi install` and every sandbox restore pays
-# for.
+# A workspace member with deliberately small dependencies. Artifact identity is the first
+# stable public seam, so it pulls in serialization and hashing now; heavier pipeline and
+# engine dependencies stay out until those modules are wired.
 #
 # See the header of `../../Cargo.toml` for why `crates/*` is the member glob and why
 # `crates/cli` is excluded from it.
@@ -24,7 +23,8 @@ categories = ["science::geo"]
 publish = false
 
 [dependencies]
-# None yet. `nadir-core` will be the first: it is the crate every other one depends on.
+serde.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true
