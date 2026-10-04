@@ -15,6 +15,21 @@ pub mod engine;
 /// Pipeline declaration, DAG validation, deterministic planning order, and diagnostics.
 pub mod pipeline;
 
+pub use artifact::{
+    Artifact, ArtifactHash, ArtifactKind, ArtifactStore, TaskParameter, TaskSpec, TaskSpecOwned,
+};
+pub use engine::{
+    ClassifyConfig, Context as EngineContext, CoordinateTransformer, DatasetReport, DemConfig,
+    DenseConfig, DenseReconstructor, Engine, EngineCapabilities, EngineError, EngineFuture,
+    EngineResult, FeatureConfig, FeatureExtractor, FeatureMatcher, FilterConfig, GeoPoint,
+    GeorefConfig, Georeferencer, GroundControlPoint, ImageProvider, IngestConfig, MatchingConfig,
+    MeshConfig, MeshGenerator, MosaicConfig, Mosaicker, OrthoConfig, Orthorectifier,
+    PointCloudClassifier, PointCloudFilter, PointCloudStore, Produced, Progress, ProgressSink,
+    Provenance, RasterStore, SfMConfig, SparseReconstructor, SurfaceGenerator, TRAIT_NAMES,
+    TextureConfig, TextureGenerator, covered_capabilities,
+};
+pub use pipeline::{Pipeline, PipelineDecl, PipelineError, Produces, TaskDecl, TaskNode};
+
 /// The pipeline stage this crate exists to implement, as it appears in a pipeline file.
 ///
 /// Named here rather than only in the docs because `nadir plan` reads it: a pipeline that
