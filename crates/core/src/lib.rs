@@ -12,6 +12,9 @@ pub mod artifact;
 /// Engine trait vocabulary, capability preflight types, progress events, and errors.
 pub mod engine;
 
+/// Pipeline declaration, DAG validation, deterministic planning order, and diagnostics.
+pub mod pipeline;
+
 /// The pipeline stage this crate exists to implement, as it appears in a pipeline file.
 ///
 /// Named here rather than only in the docs because `nadir plan` reads it: a pipeline that
