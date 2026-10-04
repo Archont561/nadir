@@ -1,14 +1,34 @@
 //! nadir-core — The types every crate shares: the 16 engine traits, artifact identity, pipeline declaration.
 //!
-//! **Scaffold.** One constant and one function, so the crate compiles, links into the
-//! workspace, and has a test that fails if the wiring is broken. The real content arrives
-//! with the stage named by [`STAGE`].
-//!
 //! Declared as a workspace member with its own `Cargo.toml` rather than as a directory of
 //! `.rs` files, because a crate that is not a member is not compiled by `cargo build
 //! --workspace`, is not in `Cargo.lock`, and is not in the licence report `pixi run lint`
 //! produces. Adding a crate is one file in its own directory; the workspace notices
 //! (`members = ["crates/*"]` in the repository-root `Cargo.toml`).
+
+/// Artifact identity, task hashing, stable JSON metadata, and the local artifact store.
+pub mod artifact;
+
+/// Engine trait vocabulary, capability preflight types, progress events, and errors.
+pub mod engine;
+
+/// Pipeline declaration, DAG validation, deterministic planning order, and diagnostics.
+pub mod pipeline;
+
+pub use artifact::{
+    Artifact, ArtifactHash, ArtifactKind, ArtifactStore, TaskParameter, TaskSpec, TaskSpecOwned,
+};
+pub use engine::{
+    ClassifyConfig, Context as EngineContext, CoordinateTransformer, DatasetReport, DemConfig,
+    DenseConfig, DenseReconstructor, Engine, EngineCapabilities, EngineError, EngineFuture,
+    EngineResult, FeatureConfig, FeatureExtractor, FeatureMatcher, FilterConfig, GeoPoint,
+    GeorefConfig, Georeferencer, GroundControlPoint, ImageProvider, IngestConfig, MatchingConfig,
+    MeshConfig, MeshGenerator, MosaicConfig, Mosaicker, OrthoConfig, Orthorectifier,
+    PointCloudClassifier, PointCloudFilter, PointCloudStore, Produced, Progress, ProgressSink,
+    Provenance, RasterStore, SfMConfig, SparseReconstructor, SurfaceGenerator, TRAIT_NAMES,
+    TextureConfig, TextureGenerator, covered_capabilities,
+};
+pub use pipeline::{Pipeline, PipelineDecl, PipelineError, Produces, TaskDecl, TaskNode};
 
 /// The pipeline stage this crate exists to implement, as it appears in a pipeline file.
 ///

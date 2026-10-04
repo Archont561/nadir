@@ -12,6 +12,7 @@ and each language binding is a thin face over one versioned JSON transport.
 | Dispatch | `engine` | Translate operations into core calls |
 | FFI | `python-native`, `node-native` | One JSON-in/JSON-out function per ABI |
 | Applications | root `nadir-cli` | User-facing commands |
+| Tooling | `xtask` | Repository-local Rust automation exposed as `pixi run xtask ...` |
 
 Dependency arrows point inward: `*-native → engine → protocol + core`. An FFI crate must not
 contain domain behavior or expose a parallel list of native functions. Add an operation to

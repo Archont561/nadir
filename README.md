@@ -232,7 +232,7 @@ See the [Rust workspace guide](crates/README.md) for crate dependency boundaries
 
 Pixi is the supported entrypoint for repository tooling. The default environment carries all
 six feature layers—Rust, JavaScript, Python, engines, build tools, and repository utilities—and
-Turbo fans package work out across Cargo, Python, and TypeScript.
+Turbo fans package work out across Cargo, Python, and TypeScript; Rust package scripts call the local `xtask` Clap CLI, which runs `cargo-nextest`, clippy, cargo-deny, rustfmt, coverage, docs, and native-addon copy steps from one reviewed command surface.
 
 ```bash
 # Everything required before a change lands
@@ -246,17 +246,21 @@ pixi run build
 pixi run test
 pixi run typecheck
 pixi run lint
-pixi run cov
+pixi run coverage   # `pixi run cov` is kept as an alias
 pixi run fmt
+
+# Rust workspace management with argument forwarding
+pixi run xtask test --package nadir-core
+pixi run xtask clippy --package nadir-engine
 
 # Network-dependent Rust advisory and license scan
 pixi run advisories
 ```
 
-`pixi run gates` covers formatting/linting, type checks, tests, GitHub Actions linting, version
-consistency, and a dry-run Conda publish plan. The advisory scan stays separate because it needs
-the network; CI runs it as its own job so a registry outage is not confused with a source
-failure.
+`pixi run gates` covers formatting/linting, type checks, tests, GitHub Actions linting, and
+version consistency. The advisory scan and Conda publish dry-run stay separate because they can
+need the network; CI runs the advisory scan as its own job so a registry outage is not confused
+with a source failure.
 
 Repository CLIs share Bun as their sole entrypoint instead of adding one Pixi task per
 package:

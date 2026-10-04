@@ -1,0 +1,13 @@
+{
+  "name": "@nadir/rust-python-native",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Turbo package for the nadir-python-native Cargo crate.",
+  "scripts": {
+    "test": "cargo run --quiet --package xtask -- test --package nadir-python-native",
+    "lint": "cargo run --quiet --package xtask -- clippy --package nadir-python-native"
+  },
+  "dependencies": {
+    "@nadir/rust-engine": "workspace:*"
+  }
+}

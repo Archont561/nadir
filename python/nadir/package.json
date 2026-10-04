@@ -5,11 +5,12 @@
   "description": "Turbo facade over the native Python SDK",
   "license": "MIT",
   "scripts": {
-    "build": "maturin build --release --features extension-module --out ../../dist/pypi",
+    "build": "cargo run --quiet --package xtask -- native python build --out dist/pypi",
     "typecheck": "echo 'Python API is runtime-checked at the native transport boundary'",
     "lint": "cd ../.. && ruff check python/nadir && ruff format --check python/nadir",
     "test": "cd ../.. && pytest python/nadir/tests",
-    "cov": "cd ../.. && pytest python/nadir/tests --cov=nadir --cov-report=lcov:python/nadir/coverage.lcov",
+    "coverage": "cd ../.. && pytest python/nadir/tests --cov=nadir --cov-report=lcov:python/nadir/coverage.lcov",
+    "cov": "bun run coverage",
     "fmt": "cd ../.. && ruff check --fix python/nadir && ruff format python/nadir",
     "advisories": "echo 'Python native dependencies are audited through Cargo.lock'"
   }

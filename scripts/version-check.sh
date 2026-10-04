@@ -92,7 +92,7 @@ expect python/nadir/package.json
 echo
 echo "  intra-workspace path dependencies (root Cargo.toml)"
 while IFS= read -r line; do
-  name=$(printf '%s' "$line" | grep -oE '^nadir-[a-z]+')
+  name=$(printf '%s' "$line" | grep -oE '^nadir-[a-z-]+')
   found=$(printf '%s' "$line" | grep -oE 'version[[:space:]]*=[[:space:]]*"[^"]+"' | grep -oE '[0-9][^"]*' | tr -d '"')
   if [[ "$found" == "$AUTHORITY" ]]; then
     printf '  %-34s %s%s%s\n' "$name" "$ok" "$found" "$reset"
@@ -100,7 +100,7 @@ while IFS= read -r line; do
     printf '  %-34s %s%s (expected %s)%s\n' "$name" "$bad" "${found:-<none>}" "$AUTHORITY" "$reset"
     failures=$((failures + 1))
   fi
-done < <(grep -E '^nadir-[a-z]+[[:space:]]*=.*path[[:space:]]*=' Cargo.toml)
+done < <(grep -E '^nadir-[a-z-]+[[:space:]]*=.*path[[:space:]]*=' Cargo.toml)
 
 # The consumers must inherit rather than restate. A `version =` on a
 # `{ workspace = true }` dependency is a second copy of the number that nothing checks and
@@ -109,12 +109,12 @@ done < <(grep -E '^nadir-[a-z]+[[:space:]]*=.*path[[:space:]]*=' Cargo.toml)
 consumer_issues=0
 while IFS= read -r line; do
   if [[ "$line" == *"version"* ]]; then
-    name=$(printf '%s' "$line" | grep -oE '^nadir-[a-z]+')
+    name=$(printf '%s' "$line" | grep -oE '^nadir-[a-z-]+')
     printf '  %-34s %srestates a version instead of inheriting%s\n' "$name" "$bad" "$reset"
     failures=$((failures + 1))
   fi
   consumer_issues=$((consumer_issues + 1))
-done < <(grep -E '^nadir-[a-z]+[[:space:]]*=.*workspace[[:space:]]*=[[:space:]]*true' Cargo.toml)
+done < <(grep -E '^nadir-[a-z-]+[[:space:]]*=.*workspace[[:space:]]*=[[:space:]]*true' Cargo.toml)
 
 echo
 if [[ "$failures" -gt 0 ]]; then

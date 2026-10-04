@@ -1,0 +1,10 @@
+{
+  "name": "@nadir/rust-protocol",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Turbo package for the nadir-protocol Cargo crate.",
+  "scripts": {
+    "test": "cargo run --quiet --package xtask -- test --package nadir-protocol",
+    "lint": "cargo run --quiet --package xtask -- clippy --package nadir-protocol"
+  }
+}

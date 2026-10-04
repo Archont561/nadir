@@ -5,6 +5,7 @@
     "": {
       "name": "nadir",
       "devDependencies": {
+        "@biomejs/biome": "1.9.4",
         "backlog.md": "^1.53.0",
         "skills": "^1.7.0",
         "turbo": "2.11.5",
@@ -13,6 +14,88 @@
     "crates": {
       "name": "@nadir/rust",
       "version": "0.1.0",
+    },
+    "crates/artifacts": {
+      "name": "@nadir/rust-artifacts",
+      "version": "0.0.0",
+    },
+    "crates/cartography": {
+      "name": "@nadir/rust-cartography",
+      "version": "0.0.0",
+    },
+    "crates/cli": {
+      "name": "@nadir/rust-cli",
+      "version": "0.0.0",
+      "dependencies": {
+        "@nadir/rust-artifacts": "workspace:*",
+        "@nadir/rust-cartography": "workspace:*",
+        "@nadir/rust-core": "workspace:*",
+        "@nadir/rust-dataset": "workspace:*",
+        "@nadir/rust-executor": "workspace:*",
+        "@nadir/rust-geometry": "workspace:*",
+        "@nadir/rust-math": "workspace:*",
+        "@nadir/rust-pipeline": "workspace:*",
+        "@nadir/rust-reconstruction": "workspace:*",
+        "@nadir/rust-surface": "workspace:*",
+      },
+    },
+    "crates/core": {
+      "name": "@nadir/rust-core",
+      "version": "0.0.0",
+    },
+    "crates/dataset": {
+      "name": "@nadir/rust-dataset",
+      "version": "0.0.0",
+    },
+    "crates/engine": {
+      "name": "@nadir/rust-engine",
+      "version": "0.0.0",
+      "dependencies": {
+        "@nadir/rust-core": "workspace:*",
+        "@nadir/rust-protocol": "workspace:*",
+      },
+    },
+    "crates/executor": {
+      "name": "@nadir/rust-executor",
+      "version": "0.0.0",
+    },
+    "crates/geometry": {
+      "name": "@nadir/rust-geometry",
+      "version": "0.0.0",
+    },
+    "crates/math": {
+      "name": "@nadir/rust-math",
+      "version": "0.0.0",
+    },
+    "crates/node-native": {
+      "name": "@nadir/rust-node-native",
+      "version": "0.0.0",
+      "dependencies": {
+        "@nadir/rust-engine": "workspace:*",
+      },
+    },
+    "crates/pipeline": {
+      "name": "@nadir/rust-pipeline",
+      "version": "0.0.0",
+    },
+    "crates/protocol": {
+      "name": "@nadir/rust-protocol",
+      "version": "0.0.0",
+    },
+    "crates/python-native": {
+      "name": "@nadir/rust-python-native",
+      "version": "0.0.0",
+      "dependencies": {
+        "@nadir/rust-engine": "workspace:*",
+      },
+    },
+    "crates/reconstruction": {
+      "name": "@nadir/rust-reconstruction",
+      "version": "0.0.0",
+    },
+    "crates/surface": {
+      "name": "@nadir/rust-surface",
+      "version": "0.0.0",
     },
     "packages/client": {
       "name": "@nadir/client",
@@ -66,6 +149,36 @@
     "@nadir/python": ["@nadir/python@workspace:python/nadir"],
 
     "@nadir/rust": ["@nadir/rust@workspace:crates"],
+
+    "@nadir/rust-artifacts": ["@nadir/rust-artifacts@workspace:crates/artifacts"],
+
+    "@nadir/rust-cartography": ["@nadir/rust-cartography@workspace:crates/cartography"],
+
+    "@nadir/rust-cli": ["@nadir/rust-cli@workspace:crates/cli"],
+
+    "@nadir/rust-core": ["@nadir/rust-core@workspace:crates/core"],
+
+    "@nadir/rust-dataset": ["@nadir/rust-dataset@workspace:crates/dataset"],
+
+    "@nadir/rust-engine": ["@nadir/rust-engine@workspace:crates/engine"],
+
+    "@nadir/rust-executor": ["@nadir/rust-executor@workspace:crates/executor"],
+
+    "@nadir/rust-geometry": ["@nadir/rust-geometry@workspace:crates/geometry"],
+
+    "@nadir/rust-math": ["@nadir/rust-math@workspace:crates/math"],
+
+    "@nadir/rust-node-native": ["@nadir/rust-node-native@workspace:crates/node-native"],
+
+    "@nadir/rust-pipeline": ["@nadir/rust-pipeline@workspace:crates/pipeline"],
+
+    "@nadir/rust-protocol": ["@nadir/rust-protocol@workspace:crates/protocol"],
+
+    "@nadir/rust-python-native": ["@nadir/rust-python-native@workspace:crates/python-native"],
+
+    "@nadir/rust-reconstruction": ["@nadir/rust-reconstruction@workspace:crates/reconstruction"],
+
+    "@nadir/rust-surface": ["@nadir/rust-surface@workspace:crates/surface"],
 
     "@nadir/sdk": ["@nadir/sdk@workspace:packages/sdk"],
 

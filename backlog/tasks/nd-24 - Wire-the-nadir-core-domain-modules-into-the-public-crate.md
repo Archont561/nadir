@@ -1,9 +1,10 @@
 ---
 id: ND-24
 title: Wire the nadir-core domain modules into the public crate
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-10-03 14:16'
+updated_date: '2026-10-04 19:50'
 labels:
   - v0.1
   - core
@@ -28,8 +29,20 @@ Turn crates/core from a stage-reporting scaffold into the dependency-light domai
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 crates/core/src/lib.rs exposes the artifact, engine and pipeline modules and re-exports the intended stable types
-- [ ] #2 The drafted modules compile under workspace lints with all required dependencies declared through workspace.dependencies
-- [ ] #3 Integration tests cover artifact identity, engine capability metadata and valid and invalid pipeline construction through only the public API
-- [ ] #4 nadir-core remains independent of CLI, FFI adapter and external-engine implementation crates
+- [x] #1 crates/core/src/lib.rs exposes the artifact, engine and pipeline modules and re-exports the intended stable types
+- [x] #2 The drafted modules compile under workspace lints with all required dependencies declared through workspace.dependencies
+- [x] #3 Integration tests cover artifact identity, engine capability metadata and valid and invalid pipeline construction through only the public API
+- [x] #4 nadir-core remains independent of CLI, FFI adapter and external-engine implementation crates
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Closed after ND-24.1, ND-24.2 and ND-24.3 landed. Added crate-root re-exports for the stable artifact, engine and pipeline vocabulary, kept nadir-core dependencies limited to serde/serde_json/thiserror, and added public API smoke coverage alongside artifact, engine and pipeline integration tests.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+nadir-core is now the dependency-light domain kernel: artifact identity, engine trait vocabulary and pipeline DAG validation compile behind the public crate API with tests and workspace gates passing.
+<!-- SECTION:FINAL_SUMMARY:END -->

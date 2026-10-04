@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "test": "bun test",
-    "cov": "bun test --coverage",
+    "coverage": "bun test --coverage",
+    "cov": "bun run coverage",
     "fmt": "biome format --write .",
     "advisories": "echo 'advisories: bun audit --production (no production deps yet)'"
   },

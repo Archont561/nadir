@@ -1,0 +1,24 @@
+# xtask — repository-local Rust automation.
+#
+# This crate is intentionally a workspace member rather than a shell-script directory:
+# Cargo already knows the package graph, Clap gives the commands a stable contract, and
+# Pixi can expose it as `pixi run xtask -- ...` without installing another tool.
+
+[package]
+name = "xtask"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Repository-local automation for the nadir Rust workspace"
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+
+[lints]
+workspace = true

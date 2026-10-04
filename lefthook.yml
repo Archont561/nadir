@@ -27,10 +27,10 @@ pre-commit:
 
     fmt-rust:
       glob: "*.rs"
-      # `cargo fmt` is workspace-wide because rustfmt does not take a file list cheaply.
+      # `xtask fmt` is workspace-wide because rustfmt does not take a file list cheaply.
       # It is fast enough (well under a second on this workspace) that the bluntness costs
-      # nothing.
-      run: cargo fmt --all
+      # nothing, and keeps hook, CI and package scripts on the same Rust automation path.
+      run: pixi run -e default -- xtask fmt
       stage_fixed: true
 
     trailing-whitespace:

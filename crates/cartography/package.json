@@ -1,0 +1,10 @@
+{
+  "name": "@nadir/rust-cartography",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Turbo package for the nadir-cartography Cargo crate.",
+  "scripts": {
+    "test": "cargo run --quiet --package xtask -- test --package nadir-cartography",
+    "lint": "cargo run --quiet --package xtask -- clippy --package nadir-cartography"
+  }
+}
