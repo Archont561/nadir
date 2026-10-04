@@ -7,14 +7,14 @@ Backlog.md keeps every task as a plain Markdown file under `backlog/`, versioned
 
 ## Running it in this repo
 
-This project has `backlog.md` as a root bun-workspace devDependency, exposed as a pixi task — run it as:
+This project has `backlog.md` as a root Bun-workspace devDependency. Every JavaScript CLI goes through the one generic `bun` Pixi task:
 
 ```
-pixi run backlog <args>          # = bun x backlog
+pixi run bun x --bun backlog <args>
 ```
 
-- The task depends on `bun-install`, so the workspace installs itself on first use; `pixi run setup` also covers it. The `backlog` binary has a `#!/usr/bin/env node` shebang and the `default` pixi env carries no node (ADR-010), so a bare `backlog` (or `node_modules/.bin/backlog`) fails with `env: node: No such file or directory` — go through `bun x` / the pixi task.
-- If `backlog/` does not exist yet, run `pixi run backlog init` once to scaffold it.
+- The generic task depends on `bun-install`, so the workspace installs itself on first use; `pixi run setup` also covers it. `--bun` overrides the `backlog` binary's `#!/usr/bin/env node` shebang because the `default` Pixi environment carries no Node.js (ADR-010). A bare `backlog` or `node_modules/.bin/backlog` therefore fails with `env: node: No such file or directory`.
+- If `backlog/` does not exist yet, run `pixi run bun x --bun backlog init` once to scaffold it.
 
 ## Agent mode
 
@@ -26,17 +26,17 @@ Read commands default to an **interactive TUI** that never returns in a non-inte
 
 ## The loop
 
-1. **Find work** — `pixi run backlog task list -s "To Do" --plain`, or `pixi run backlog search "<query>" --plain`.
-2. **Read before coding** — `pixi run backlog task <id> --plain`. Read the acceptance criteria and any plan first; match test and interface names to the task's vocabulary.
-3. **Claim and plan** — `pixi run backlog task edit <id> -s "In Progress" -a @me --plan "approach"`.
-4. **Record progress in notes** (execution log), not comments — `pixi run backlog task edit <id> --notes "..."` then `--append-notes "..."` for more lines.
+1. **Find work** — `pixi run bun x --bun backlog task list -s "To Do" --plain`, or `pixi run bun x --bun backlog search "<query>" --plain`.
+2. **Read before coding** — `pixi run bun x --bun backlog task <id> --plain`. Read the acceptance criteria and any plan first; match test and interface names to the task's vocabulary.
+3. **Claim and plan** — `pixi run bun x --bun backlog task edit <id> -s "In Progress" -a @me --plan "approach"`.
+4. **Record progress in notes** (execution log), not comments — `pixi run bun x --bun backlog task edit <id> --notes "..."` then `--append-notes "..."` for more lines.
 5. **Verify against AC** — mark each criterion with `--check-ac <n>`; write a PR-ready `--final-summary "..."` when the work is done.
-6. **Close** — set `-s Done`, or `pixi run backlog task complete <id>` during cleanup (keeps the record and dependency links). Use `pixi run backlog task archive <id>` for cancelled, duplicate, or invalid work.
+6. **Close** — set `-s Done`, or `pixi run bun x --bun backlog task complete <id>` during cleanup (keeps the record and dependency links). Use `pixi run bun x --bun backlog task archive <id>` for cancelled, duplicate, or invalid work.
 
 ## Creating tasks
 
 ```
-pixi run backlog task create "Title" -d "description" --ac "First,Second" -l area --priority high --dep task-1
+pixi run bun x --bun backlog task create "Title" -d "description" --ac "First,Second" -l area --priority high --dep task-1
 ```
 
 Sub-task: add `-p <parent-id>`. Draft: add `--draft`, or `backlog draft create "..."` then `backlog draft promote <id>`. Full flag surface is in [`REFERENCE.md`](REFERENCE.md).
@@ -49,4 +49,4 @@ Sub-task: add `-p <parent-id>`. Draft: add `--draft`, or `backlog draft create "
 
 ## More
 
-For the exhaustive command and flag table (task edit AC/DoD operations, dependencies, milestones, drafts, board/export, browser, config, JSON shapes) see [`REFERENCE.md`](REFERENCE.md), and trust `pixi run backlog <command> --help` as the live source of truth over any cached list here.
+For the exhaustive command and flag table (task edit AC/DoD operations, dependencies, milestones, drafts, board/export, browser, config, JSON shapes) see [`REFERENCE.md`](REFERENCE.md), and trust `pixi run bun x --bun backlog <command> --help` as the live source of truth over any cached list here.

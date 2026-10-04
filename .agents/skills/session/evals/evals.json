@@ -1,0 +1,43 @@
+{
+  "skill_name": "session",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Start a work session in this Nadir checkout. Pixi is not on PATH, the working branch has two modified files from the previous agent, and I have not picked a backlog task yet. Figure out what is safe to work on next.",
+      "expected_output": "The agent preserves the modified files, activates or restores the published sandbox, verifies transport provenance, runs the strongest honest baseline, surveys task dependencies and recent landed work, then presents an ordered standup and stops for approval.",
+      "files": [],
+      "expectations": [
+        "The response inspects and preserves the dirty working tree rather than resetting, cleaning, stashing, or switching branches.",
+        "The response restores or activates Pixi and checks the transport source and lock relationship before proposing work.",
+        "The response distinguishes a full gate baseline from a Rust-only strict-airlock fallback.",
+        "Backlog discovery invokes backlog through the generic Bun entrypoint rather than a dedicated Pixi backlog task.",
+        "The response proposes ordered, dependency-aware candidates and explicitly waits for user confirmation before editing."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Continue ND-24 in the restored Nadir sandbox. The environment is active and the user has approved the task, but node_modules is absent and this machine has no npm access. Implement only what can be proved here and prepare the hand-off.",
+      "expected_output": "The agent reads ND-24 and linked architecture, uses Pixi-wrapped offline Cargo commands, follows TDD and the shared Rust-domain boundaries, records unavailable JavaScript gates as a proof gap, and emits a task hand-off without falsely completing unproven criteria.",
+      "files": [],
+      "expectations": [
+        "Cargo and repository tools are invoked through pixi with frozen/offline semantics rather than as bare commands.",
+        "The workflow uses ND-24 acceptance criteria as scope and gathers narrow regression evidence before broader checks.",
+        "Missing node_modules is reported as a proof limitation rather than hidden or repaired with an unapproved online install.",
+        "The hand-off names changed paths, exact commands and results, AC state, sandbox impact, and a focused Conventional Commit."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "The Nadir pull request merged five minutes ago. Close the session and tell the next agent exactly where to resume. CI is green but publish sandbox is still running.",
+      "expected_output": "The agent distinguishes the merge from post-merge completion, checks current CI and sandbox publication, leaves transport-dependent proof open while publication runs, reports task and baseline state, and writes a paste-ready next-session opening prompt.",
+      "files": [],
+      "expectations": [
+        "The report does not claim the sandbox transport is current while publish sandbox is still running.",
+        "Transport diagnostics use the verified pixi-sandbox release binary directly rather than a removed Pixi wrapper task.",
+        "Task criteria requiring the new transport remain open and name the missing publication proof.",
+        "The session report identifies the landed PR/main revision, workflow verdicts, baseline evidence, and current working-tree state.",
+        "The final block is a filled next-session opening prompt carrying transport, branch, task, and proof-boundary facts."
+      ]
+    }
+  ]
+}

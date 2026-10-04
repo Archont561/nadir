@@ -3,6 +3,12 @@
 How to work in this repository, and why it is arranged this way. Read
 `.knowledge/` for what the project is; this file is how to build it.
 
+**Starting, resuming, or closing a sandbox session?** Follow
+`.agents/skills/session/SKILL.md`. It sequences environment activation and provenance checks,
+the baseline, dependency-aware backlog survey, stop-for-approval standup, task hand-off, and
+post-merge report. Its four stable output shapes are in
+`.agents/skills/session/standup-template.md`.
+
 ## The one command
 
 ```sh
@@ -67,13 +73,13 @@ currently `crates/cli` and `crates/.turbo`. The second one is not a typo: turbo 
 log directory beside every workspace package, and `crates/package.json` makes `crates/` one.
 
 **`cargo_vendor = true` in `.pixi-sandbox.toml` means the vendored crates are in the
-transport.** Every crate in `Cargo.lock` is copied on every `sandbox-pack`. Adding a
-dependency is a size decision, not just a build-time one. It is also what makes an airlocked
-machine able to build the workspace rather than only run the binary.
+transport.** Every crate in `Cargo.lock` is copied whenever pixi-sandbox packs the bundle.
+Adding a dependency is a size decision, not just a build-time one. It is also what makes an
+airlocked machine able to build the workspace rather than only run the binary.
 
 **OpenMVS is not a dependency.** There is no conda-forge package for it and a manifest naming
 it fails to solve. `pixi run build-openmvs` builds it from source; a binary installed that
-way is only offline-restorable if a `sandbox-pack` ran afterwards.
+way is only offline-restorable if pixi-sandbox packs that environment afterwards.
 
 **COLMAP is pinned to `build = "cpu_*"`.** The CUDA build string drags `cuda-version` and a
 GPU stack into every environment including CI runners with no GPU. Do not "fix" the version
@@ -106,24 +112,25 @@ Create the directory, a `package.json` with the task scripts from `crates/packag
 
 ## Agent tooling: skills and the backlog
 
-Two npm tools, both root devDependencies rather than conda packages, both reached through
-a pixi task:
+Bun is the sole entrypoint for JavaScript CLIs. `backlog.md`, `skills`, and future CLI
+packages are root devDependencies reached through the one generic `bun` Pixi task:
 
 ```sh
-pixi run skills                 # = bun x skills
-pixi run backlog task list --plain
+pixi run bun x --bun skills list
+pixi run bun x --bun backlog task list --plain
 ```
 
-`bun x`, not `bunx`: the conda-forge `bun` package ships no `bunx` shim. And not
-`node_modules/.bin/backlog` either — both binaries carry a `#!/usr/bin/env node` shebang
-and no environment here provides node (ADR-010), so a direct call fails with
-`env: node: No such file or directory`. That is the shebang, not a broken install.
+`bun x`, not `bunx`: the conda-forge package ships no `bunx` shim. `--bun` overrides the
+packages' `#!/usr/bin/env node` shebangs because no environment here provides Node.js
+(ADR-010). A direct `node_modules/.bin/backlog` therefore fails with `env: node: No such
+file or directory`; that is the shebang, not a broken install. The generic task depends on
+`bun-install`, so the committed `bun.lock` still decides what runs.
 
 **Skills** live in `.agents/skills/`, checked in, with their origin and content hash in
 `skills-lock.json`. They are vendored on purpose: a skill that resolves over the network
 is a different skill on a machine with no network, and this repository ships an offline
-sandbox. `pixi run skills list` shows what is installed; `pixi run skills update` refreshes
-a vendored copy and rewrites the lock, which is a reviewable diff.
+sandbox. `pixi run bun x --bun skills list` shows what is installed; replace `list` with
+`update` to refresh a vendored copy and rewrite the lock as a reviewable diff.
 
 **Work is Markdown**, under `backlog/`, versioned with the code — task state is a git
 commit, not a row in someone else's database. The conventions:
@@ -167,21 +174,20 @@ environment plus the vendored crate sources. The branch has to exist first: it i
 by the `publish sandbox` workflow on every push to `main`, so a fresh clone whose last
 publish has not finished yet gets `not a valid object name: origin/sandbox/...`.
 
-`pixi run sandbox-doctor` verifies a packed transport without writing anything, and
-`pixi run lint-sandbox-plan` validates the publish plan. `lint-sandbox-plan` is **not** in
-`gates` and cannot be: `pixi-sandbox` is a release binary rather than a conda dependency,
-so a local `pixi run gates` would fail on a missing binary rather than on a real finding.
-CI runs it as its own job, after installing the tool with the SHA-pinned setup action.
+Pixi-sandbox is a release binary rather than a project dependency, so it has no wrapper
+tasks in `pixi.toml`. CI installs the SHA-pinned binary and runs `pixi-sandbox plan
+--config .pixi-sandbox.toml` directly; use `pixi-sandbox doctor --branch-location
+.sandbox-out --verify` to verify a local pack without writing anything.
 
-Never run `sandbox-publish` without reviewing the plan first. It writes to a branch on
-`origin`.
+Never run `pixi-sandbox publish` without reviewing `pixi-sandbox plan` first. Publish writes
+to an orphan branch on `origin`.
 
-## Working offline in a devcontainer
+## Working in a devcontainer
 
-`.devcontainer/devcontainer.json` runs `pixi install --locked && pixi run setup` on create
-and `pixi run post-create` afterwards, which reports the tool versions, the engine status
-and the next command to run. It is read-only, so it is safe to re-run to diagnose a
-container that is broken or merely quiet.
+`.devcontainer/devcontainer.json` uses the Pixi 0.81.0 image and delegates creation to
+`.devcontainer/setup.sh`. The script installs the baseline Git/GitHub and C compiler tools,
+materialises every locked Pixi environment, runs `pixi run setup`, and installs opencode in
+Bun's global tool directory.
 
 ## What is not built yet
 

@@ -23,7 +23,7 @@ ordinal: 7000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-OpenMVS has no conda-forge package for linux-64, so unlike COLMAP it is not simply a dependency: pixi run build-openmvs builds it from source, and a binary installed that way is only offline-restorable if a sandbox-pack ran afterwards. This task is the adapter (InterfaceCOLMAP then DensifyPointCloud) and the decision about how the engine reaches a user machine, written down as an ADR.
+OpenMVS has no conda-forge package for linux-64, so unlike COLMAP it is not simply a dependency: `pixi run build-openmvs` builds it from source, and a binary installed that way is only offline-restorable if the pixi-sandbox CLI packs that environment afterwards. This task is the adapter (InterfaceCOLMAP then DensifyPointCloud) and the decision about how the engine reaches a user machine, written down as an ADR.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria

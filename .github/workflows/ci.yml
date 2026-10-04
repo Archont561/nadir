@@ -111,10 +111,10 @@ jobs:
       - name: Install the environment
         run: pixi install --locked -e default
 
-      # `pixi-sandbox` is deliberately not a conda dependency (see the task note in
-      # pixi.toml), so `lint-sandbox-plan` has no binary to call unless this step puts one
-      # on PATH. Same SHA-pinned setup action, same version, as publish-sandbox.yml — the
-      # plan validated here and the plan the publisher executes must come from one tool.
+      # `pixi-sandbox` is deliberately not a conda dependency or a Pixi task. The
+      # SHA-pinned setup action puts the release binary on PATH; using that binary directly
+      # keeps transport orchestration out of the project's build task graph. The version is
+      # the same one publish-sandbox.yml uses, so validation and publication share a tool.
       - name: Install pixi-sandbox
         uses: Archont561/pixi-sandbox/setup@118d53f07ca7e6bc5c931f1bf6a8d601dcf7a7b9
         with:
@@ -124,7 +124,7 @@ jobs:
       # plan drifts from the manifest, the failure surfaces here rather than at the
       # customer's first `restore.sh` run.
       - name: Validate the sandbox publish plan
-        run: pixi run --locked lint-sandbox-plan
+        run: pixi-sandbox plan --config .pixi-sandbox.toml
 
   advisories:
     name: advisories
