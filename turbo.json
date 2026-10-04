@@ -2,37 +2,143 @@
   "$schema": "https://turborepo.com/schema.json",
   "ui": "stream",
   "globalDependencies": [
+    "biome.json",
     "pixi.toml",
     "pixi.lock",
     "Cargo.toml",
     "Cargo.lock",
-    "tsconfig.base.json",
-    "biome.json"
+    "tsconfig.base.json"
   ],
   "cacheDir": ".turbo/cache",
   "tasks": {
+    "build:native": {
+      "dependsOn": [],
+      "inputs": [
+        "package.json",
+        "$TURBO_ROOT$/Cargo.toml",
+        "$TURBO_ROOT$/Cargo.lock",
+        "$TURBO_ROOT$/crates/**"
+      ],
+      "outputs": ["*.node"]
+    },
+    "build:native:release": {
+      "dependsOn": [],
+      "inputs": [
+        "package.json",
+        "$TURBO_ROOT$/Cargo.toml",
+        "$TURBO_ROOT$/Cargo.lock",
+        "$TURBO_ROOT$/crates/**"
+      ],
+      "outputs": ["*.node"]
+    },
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", "build/**", "target/**"]
+      "dependsOn": ["^build", "build:native"],
+      "inputs": [
+        "src/**",
+        "tests/**",
+        "package.json",
+        "tsconfig.json",
+        "$TURBO_ROOT$/tsconfig.base.json"
+      ],
+      "outputs": ["dist/**", "build/**"]
+    },
+    "build:release": {
+      "dependsOn": ["^build:release"],
+      "inputs": [
+        "package.json",
+        "$TURBO_ROOT$/Cargo.toml",
+        "$TURBO_ROOT$/Cargo.lock",
+        "$TURBO_ROOT$/crates/**"
+      ],
+      "outputs": []
     },
     "typecheck": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**",
+        "tests/**",
+        "package.json",
+        "tsconfig.json",
+        "$TURBO_ROOT$/tsconfig.base.json",
+        "$TURBO_ROOT$/Cargo.toml",
+        "$TURBO_ROOT$/Cargo.lock",
+        "$TURBO_ROOT$/crates/**"
+      ],
+      "outputs": []
     },
     "lint": {
-      "cache": false
+      "dependsOn": [],
+      "inputs": [
+        "src/**",
+        "tests/**",
+        "package.json",
+        "Cargo.toml",
+        "$TURBO_ROOT$/Cargo.toml",
+        "$TURBO_ROOT$/Cargo.lock",
+        "$TURBO_ROOT$/deny.toml"
+      ],
+      "outputs": []
     },
     "test": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "dependsOn": ["^build", "build:native"],
+      "inputs": [
+        "src/**",
+        "tests/**",
+        "package.json",
+        "tsconfig.json",
+        "$TURBO_ROOT$/tsconfig.base.json",
+        "$TURBO_ROOT$/Cargo.toml",
+        "$TURBO_ROOT$/Cargo.lock",
+        "$TURBO_ROOT$/crates/**"
+      ],
+      "outputs": []
+    },
+    "coverage": {
+      "dependsOn": ["^build", "build:native"],
+      "inputs": ["src/**", "tests/**", "package.json", "tsconfig.json"],
+      "outputs": ["coverage/**", "*.lcov", "$TURBO_ROOT$/lcov.info"],
+      "cache": false
     },
     "cov": {
+      "dependsOn": ["coverage"],
+      "outputs": [],
       "cache": false
     },
     "fmt": {
       "cache": false
     },
+    "doc": {
+      "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
     "advisories": {
       "cache": false
+    },
+    "//#lint:biome": {
+      "inputs": ["biome.json", "**/*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc}"],
+      "outputs": []
+    },
+    "//#lint:actions": {
+      "inputs": [".github/workflows/*.yml", ".github/workflows/*.yaml"],
+      "outputs": []
+    },
+    "//#fmt:biome": {
+      "cache": false
     }
-  }
+  },
+  "futureFlags": {
+    "affectedUsingTaskInputs": true
+  },
+  "globalPassThroughEnv": [
+    "CARGO_HOME",
+    "CARGO_TARGET_*",
+    "RUSTFLAGS",
+    "RUSTDOCFLAGS",
+    "PYO3_*",
+    "PYTHON_SYS_EXECUTABLE",
+    "CONDA_PREFIX"
+  ]
 }

@@ -15,8 +15,9 @@ post-merge report. Its four stable output shapes are in
 pixi run gates
 ```
 
-Everything CI runs, except the network-dependent advisory scan. If that passes, the change
-is in good shape. Run it before claiming a task is done, not just the tests.
+The local source gate: lint, typecheck, tests, and version consistency. CI adds build,
+sandbox-plan validation, and the network-dependent advisory scan. If `gates` passes, the
+source checks are in good shape; run it before claiming a task is done, not just the tests.
 
 ## Prerequisites
 
@@ -44,12 +45,13 @@ manager and the test runner.
 | --- | --- | --- |
 | `pixi.toml` | every system dependency, and the task graph | nothing per-language |
 | `Cargo.toml` | the Rust workspace, and the `nadir-cli` package | JavaScript or Python config |
-| `package.json` | the Bun workspace, the `all:*` turbo entry points, and the repo-wide agent tooling (`backlog.md`, `skills`) | tool versions |
+| `package.json` | the Bun workspace, root Turbo verbs (`build`, `lint`, `test`, `typecheck`, `coverage`) and repo-wide agent tooling (`backlog.md`, `skills`) | tool versions |
 | `.agents/skills/` | the agent skills, checked in | their provenance |
 | `skills-lock.json` | where each skill came from, and its hash | the skill text |
 | `backlog/` | the project's work, as Markdown tasks | anything the CLI can write |
-| `turbo.json` | task ordering and caching | task commands |
-| `crates/*/package.json` | the cargo commands, as a turbo facade | cargo configuration |
+| `turbo.json` | task ordering, inputs, outputs and caching | task commands |
+| `crates/xtask` | the Clap CLI for Rust workspace management, exposed as `pixi run xtask ...` | product code |
+| `crates/*/package.json` | per-crate Turbo facades; Rust work delegates to xtask | cargo configuration |
 | `python/nadir/package.json` | the pytest/ruff commands, as a turbo facade | python dependencies |
 | `deny.toml` | cargo-deny, at the workspace root | anything else |
 | `lefthook.yml` | git hooks | CI |
@@ -59,6 +61,16 @@ manager and the test runner.
 dependency or a task is recorded, check whether an existing one covers it. `pixi run
 version-check` enforces the version case and will fail a commit that skips a file.
 
+## Code change workflow
+
+**Use the TDD and refactor skills for code changes.** Before changing product code, consult
+`.agents/skills/tdd/SKILL.md` and work red → green at a public seam: name the seam, write the
+failing behavior test first, then add only enough implementation to pass. Once green, consult
+`.agents/skills/refactor/SKILL.md` for cleanup: preserve behavior, move in small steps, and run
+the targeted tests after each meaningful change. Pure refactors still need an existing passing
+test or a characterization test first; do not mix behavior changes and refactors in the same
+cycle.
+
 ## The rules that will bite
 
 **`Cargo.toml` is both `[workspace]` and `[package]`.** `pixi-build-rust` builds a package
@@ -67,10 +79,12 @@ virtual manifest. So the root is a package (`nadir-cli`), the binary's sources l
 `crates/cli/` behind a `[[bin]] path`, and `crates/cli` is excluded from the members glob.
 Do not "fix" this by making the root virtual.
 
-**`members = ["crates/*"]` is a glob, and the glob is the point.** Adding a crate is one
-directory. The cost is that every non-crate directory under `crates/` must be in `exclude` —
-currently `crates/cli` and `crates/.turbo`. The second one is not a typo: turbo writes a
-log directory beside every workspace package, and `crates/package.json` makes `crates/` one.
+**`members = ["crates/*"]` is a glob, and the glob is the point.** Adding a Cargo crate is
+one directory. The cost is that every non-Cargo-crate directory under `crates/` must be in
+`exclude` — currently `crates/cli` and `crates/.turbo`. The first still has a
+`package.json` because Turbo needs a facade for the root `nadir-cli` package; it is excluded
+only from Cargo. The second is not a typo: turbo writes a log directory beside every
+workspace package, and `crates/package.json` makes `crates/` one.
 
 **`cargo_vendor = true` in `pixi-sandbox.toml` means the vendored crates are in the
 transport.** Every crate in `Cargo.lock` is copied whenever pixi-sandbox packs the bundle.
@@ -96,19 +110,24 @@ crate will switch off, at the moment it becomes inconvenient.
 
 ```sh
 mkdir -p crates/<name>/src
-# crates/<name>/Cargo.toml — name, version.workspace = true, [lints] workspace = true
-# crates/<name>/src/lib.rs    — //! docs, the public API, #[cfg(test)] mod tests
-pixi run typecheck             # the glob picks it up; no registration needed
+# crates/<name>/Cargo.toml   — name, version.workspace = true, [lints] workspace = true
+# crates/<name>/src/lib.rs   — //! docs, the public API, #[cfg(test)] mod tests
+# crates/<name>/package.json — @nadir/rust-<name>, with test/lint scripts that call xtask
+pixi run typecheck            # Cargo and Bun workspace globs pick it up
 ```
 
 Add it to `[workspace.dependencies]` and to the root `[dependencies]` if the CLI reports on
-it. Nothing else. There is no workspace registration step; that is what the glob is for.
+it. If the crate depends on another Rust crate, mirror that edge in `crates/<name>/package.json`
+with a `workspace:*` dependency so Turbo's affected graph knows about it. Do not put Cargo
+logic in the package script: add an xtask subcommand and call that.
 
 ## Adding a JS or Python package
 
-Create the directory, a `package.json` with the task scripts from `crates/package.json` or
-`python/nadir/package.json`, and let the `packages/*` or `python/*` glob pick it up. Add
-`turbo run <task>` in the root `all:*` script only if the task is new to the repository.
+Create the directory, a `package.json` with the task scripts from a sibling package, and let
+the `packages/*` or `python/*` glob pick it up. Add a root script and a `turbo.json` task
+only if the verb is new to the repository; otherwise the existing `build`, `lint`, `test`,
+`typecheck`, `coverage` and `fmt` verbs already fan out to every package that implements
+them.
 
 ## Agent tooling: skills and the backlog
 

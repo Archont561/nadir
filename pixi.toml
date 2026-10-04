@@ -305,18 +305,19 @@ rust = ">=1.98.1,<1.99"
 # step can be a single line: `pixi run <task>`. Logic lives here (reviewable, runnable
 # locally), not in workflow YAML.
 #
-# The package-specific work — build, test, lint, typecheck, cov, fmt — is NOT here. Each
-# package owns its own commands in the manifest a reader of that package already opens:
+# The package-specific work — build, test, lint, typecheck, coverage, fmt — is NOT here.
+# Each package owns its own commands in the manifest a reader of that package already opens:
 #
-#   crates/package.json        the Rust workspace (cargo build/nextest/clippy/deny/llvm-cov)
+#   crates/package.json        workspace-wide Rust tasks that delegate to xtask
+#   crates/*/package.json      per-crate Rust clippy/nextest tasks that delegate to xtask
 #   python/nadir/package.json  the Python SDK     (pytest, ruff, pytest-cov)
 #   packages/*                 the Bun workspace  (tsc, bun test)
 #
 # Turbo owns the ordering and caching across those manifests; the tasks in the repo-wide
 # block below are the single entry point into it, so `pixi run test` still runs every
 # language's tests and a CI step is still one line. What stays outside turbo is the work
-# that is genuinely repository-global — the changelog, the Actions lint, the Rust
-# advisories and publishing — plus the `setup` a fresh clone needs.
+# that is genuinely repository-global — the changelog, the Actions lint, publishing, and
+# the `setup` a fresh clone needs.
 #
 # NOTE (pixi 0.81): `default-environment` is only accepted on tasks that have a `cmd`.
 # Pure aggregators (setup / gates / ci) omit it and resolve their environment through the
@@ -332,7 +333,7 @@ rust = ">=1.98.1,<1.99"
 bun-install = { cmd = "bun install --frozen-lockfile", description = "Install the Bun workspace from the root lockfile" }
 # Build the PyO3 extension and install the mixed package editable into Pixi's interpreter.
 # Maturin and Cargo both come from this locked environment.
-py-install = { cmd = "maturin develop --features extension-module", cwd = "python/nadir", description = "Build and install the native nadir Python SDK" }
+py-install = { cmd = "cargo run --quiet --package xtask -- native python develop", description = "Build and install the native nadir Python SDK" }
 # Install the git hooks. Run once per clone; `lefthook install` is idempotent.
 hooks-install = { cmd = "lefthook install", description = "Install the lefthook git hooks into .git/hooks" }
 setup = { description = "Materialise the workspace: bun workspace, Python SDK, git hooks", depends-on = [
@@ -352,6 +353,13 @@ setup = { description = "Materialise the workspace: bun workspace, Python SDK, g
 # tool that is not already in this environment, and so a malformed manifest is a failure
 # rather than a silently skipped check.
 version-check = { cmd = "bash scripts/version-check.sh", description = "Assert the project version is identical in Cargo.toml, pixi.toml, package.json and pyproject.toml" }
+# The trailing `--` belongs to `cargo run`, so Pixi can append user arguments directly:
+#
+#   pixi run xtask --help
+#   pixi run xtask test --package nadir-core
+#
+# Everything after the task name reaches the xtask Clap parser rather than Cargo's parser.
+xtask = { cmd = "cargo run --quiet --package xtask --", description = "Run the Rust workspace management CLI; append xtask arguments after the task name" }
 
 # ── repo-wide task graph (turbo) ────────────────────────────────────────────────
 # Each reaches turbo through `bun run <script>` in the root package.json, never through a
@@ -361,31 +369,38 @@ version-check = { cmd = "bash scripts/version-check.sh", description = "Assert t
 # ruff + biome, all under one command and one cache. The `depends-on` here is only what a
 # clone needs before turbo can start: the Bun install for turbo itself, and the editable
 # Python install for the pytest tasks.
-build = { cmd = "bun run all:build", depends-on = [
+build = { cmd = "bun run build", depends-on = [
   "bun-install",
-], description = "Build every package that has a build (turbo: Rust release binary + TS workspace)" }
-test = { cmd = "bun run all:test", depends-on = [
+], description = "Build every package that has a build (turbo: Rust workspace + TS workspace)" }
+build-release = { cmd = "bun run build:release", depends-on = [
+  "bun-install",
+], description = "Build optimized Rust artifacts (turbo)" }
+test = { cmd = "bun run test", depends-on = [
   "bun-install",
   "py-install",
 ], description = "Run every package's tests (turbo: Rust nextest + doctests, Python pytest, TS)" }
-typecheck = { cmd = "bun run all:typecheck", depends-on = [
+typecheck = { cmd = "bun run typecheck", depends-on = [
   "bun-install",
 ], description = "Type-check every package that has a typecheck (turbo: cargo check + tsc)" }
-lint = { cmd = "bun run all:lint", depends-on = [
+lint = { cmd = "bun run lint", depends-on = [
   "bun-install",
-], description = "Lint every package (turbo: Rust fmt-check/clippy/deny, Python ruff, biome for JS/JSON)" }
-cov = { cmd = "bun run all:cov", depends-on = [
+], description = "Lint every package (turbo: Rust fmt/clippy/deny through xtask, Python ruff, biome/actionlint)" }
+coverage = { cmd = "bun run coverage", depends-on = [
   "bun-install",
   "py-install",
 ], description = "Measure coverage for every package that reports it (turbo: llvm-cov, pytest-cov, bun)" }
-fmt = { cmd = "bun run all:fmt", depends-on = [
+cov = { cmd = "bun run coverage", depends-on = [
   "bun-install",
-], description = "Rewrite every package with its formatter (turbo: cargo fmt, ruff, biome)" }
+  "py-install",
+], description = "Alias for coverage" }
+fmt = { cmd = "bun run fmt", depends-on = [
+  "bun-install",
+], description = "Rewrite every package with its formatter (turbo: cargo fmt through xtask, ruff, biome)" }
 # The Rust advisory scan is a package task too (crates/package.json), but it gets its own
 # pixi entry point and stays out of `lint`/`gates`: it needs the RustSec advisory database
 # over the network, and a gate that fails because rustsec.io was unreachable trains people
 # to ignore gates. The release workflow runs it.
-advisories = { cmd = "bun run all:advisories", depends-on = [
+advisories = { cmd = "bun run advisories", depends-on = [
   "bun-install",
 ], description = "Check the Rust dependencies against the advisory database (network)" }
 
@@ -417,13 +432,12 @@ bun = { cmd = "bun", depends-on = [
 # Two tasks, and the split is the point.
 #
 # `publish-plan` resolves the publish set and stops: it validates `[package]` against the
-# manifests without building anything and without touching a channel. That makes it a gate
-# rather than a release step — a `[package]` naming a binary `cargo install` does not
-# produce, or a `binaries` entry that disagrees with `[[bin]] name`, fails a pull request
-# instead of a release. It is in `gates` below.
+# manifests without building anything and without touching a channel. It is deliberately
+# outside `gates`: the build backend may need channel metadata, so a network outage should
+# not block ordinary source checks.
 #
-# `publish-dist` is the real build, and it is deliberately NOT in `gates`: it compiles the
-# whole workspace under a freshly pinned toolchain and takes about a minute. A gate that
+# `publish-dist` is the real build, and it is also deliberately NOT in `gates`: it compiles
+# the whole workspace under a freshly pinned toolchain and takes about a minute. A gate that
 # takes a minute on every push is a gate people stop waiting for, and this one has no answer
 # to give about the source — only about the artefact.
 #
@@ -456,16 +470,15 @@ build-openmvs = { cmd = """
 
 # ── gates ──────────────────────────────────────────────────────────────────────
 # One command for "what CI will run". The package-specific checks are three turbo
-# invocations (`lint`, `typecheck`, `test`) that fan out across every language; the rest is
-# the repository-global check that has no package to belong to. `advisories` is the
-# deliberate omission — it needs the network (see its note above).
+# invocations (`lint`, `typecheck`, `test`) that fan out across every language; `lint`
+# includes the root Biome and actionlint tasks. `version-check` is the repository-global
+# check that has no package to belong to. `advisories` and `publish-plan` are deliberate
+# omissions — both can need the network (see their notes above).
 gates = { description = "Every check that must pass before a commit lands", depends-on = [
   "lint",
   "typecheck",
   "test",
-  "lint-actions",
   "version-check",
-  "publish-plan",
 ] }
 # `gates` plus the built artefacts.
 ci = { description = "`gates` plus the built artefacts", depends-on = [

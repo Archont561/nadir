@@ -46,7 +46,7 @@ Session proposal — <YYYY-MM-DD>
 
 Environment: <devcontainer | restored sandbox | host Pixi>; Pixi <version>.
 Transport: source <sha>, pixi-sandbox <version>, <lock/vendor freshness>; activation via
-<sandbox-env.sh | registered launcher | host Pixi>.
+<registered launcher | host Pixi | restored tool path>.
 Baseline: <full gates or exact partial proof> → <counts/verdict and duration if useful>.
 Proof gap: <none | unavailable suite and why>.
 Branch: <name>, <ahead/behind/diverged from origin/main>, working tree <clean | intentional paths>.
@@ -85,7 +85,7 @@ Evidence:
 - <full or partial baseline command> → <counts/verdict; compare with opening baseline>
 
 Acceptance criteria: <proven AC numbers>; <open AC and missing proof, or "all proven">.
-Gates: <fmt> <lint> <typecheck> <test> <version/publish checks as applicable>.
+Gates: <fmt> <lint> <typecheck> <test> <version-check>; <advisory/publish checks only if in scope>.
 Sandbox impact: <none | pixi.lock/Cargo.lock changed; repack required>.
 Left undone: <explicit remainder or "nothing within the approved scope">.
 Proposed commit: <type(scope): subject>.

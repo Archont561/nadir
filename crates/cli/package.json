@@ -1,0 +1,22 @@
+{
+  "name": "@nadir/rust-cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Turbo package for the root nadir CLI Cargo package.",
+  "scripts": {
+    "test": "cargo run --quiet --package xtask -- test --package nadir-cli --no-doc",
+    "lint": "cargo run --quiet --package xtask -- clippy --package nadir-cli"
+  },
+  "dependencies": {
+    "@nadir/rust-core": "workspace:*",
+    "@nadir/rust-artifacts": "workspace:*",
+    "@nadir/rust-pipeline": "workspace:*",
+    "@nadir/rust-executor": "workspace:*",
+    "@nadir/rust-dataset": "workspace:*",
+    "@nadir/rust-reconstruction": "workspace:*",
+    "@nadir/rust-geometry": "workspace:*",
+    "@nadir/rust-surface": "workspace:*",
+    "@nadir/rust-cartography": "workspace:*",
+    "@nadir/rust-math": "workspace:*"
+  }
+}

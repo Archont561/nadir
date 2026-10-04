@@ -22,15 +22,17 @@
 #     `[workspace.package]` below, and `pixi run version-check` asserts the two agree, so
 #     the authority stays single and the hop is checked rather than assumed.
 #
-# NOTE ON THE CRATE LIST: the members are the crate names from
+# NOTE ON THE CRATE LIST: the product members are the crate names from
 # `.knowledge/context.md` (Naming Conventions) — the ones V0.1 through V2.0 will need —
-# not only the crates that exist today. Each is declared with the dependencies it will
-# need, so `Cargo.lock` and `pixi.lock` describe the environment the project is going to
-# be built in rather than the one it happened to be started in. That matters most for the
-# offline sandbox: a lockfile that grows in V0.1 week 3 is a sandbox that has to be
-# repacked, and a machine with no network cannot repack one. The cost is a cold
-# `cargo build` that compiles crates nobody has imported yet, which is exactly the cost
-# that buys a lockfile and a licence policy that hold all the way to V2.
+# not only the crates that exist today. `crates/xtask` is the deliberate tooling exception:
+# it gives Rust automation a Clap CLI that Pixi, Turbo, hooks and humans can all execute.
+# Each product crate is declared with the dependencies it will need, so `Cargo.lock` and
+# `pixi.lock` describe the environment the project is going to be built in rather than the
+# one it happened to be started in. That matters most for the offline sandbox: a lockfile
+# that grows in V0.1 week 3 is a sandbox that has to be repacked, and a machine with no
+# network cannot repack one. The cost is a cold `cargo build` that compiles crates nobody
+# has imported yet, which is exactly the cost that buys a lockfile and a licence policy
+# that hold all the way to V2.
 #
 # A member with no source is a statement about the dependency graph, not a placeholder for
 # future work. Deleting a member is a deletion, and `cargo deny` will say so immediately.

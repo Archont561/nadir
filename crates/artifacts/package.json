@@ -1,0 +1,10 @@
+{
+  "name": "@nadir/rust-artifacts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Turbo package for the nadir-artifacts Cargo crate.",
+  "scripts": {
+    "test": "cargo run --quiet --package xtask -- test --package nadir-artifacts",
+    "lint": "cargo run --quiet --package xtask -- clippy --package nadir-artifacts"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@nadir/rust-dataset",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Turbo package for the nadir-dataset Cargo crate.",
+  "scripts": {
+    "test": "cargo run --quiet --package xtask -- test --package nadir-dataset",
+    "lint": "cargo run --quiet --package xtask -- clippy --package nadir-dataset"
+  }
+}

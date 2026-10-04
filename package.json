@@ -13,22 +13,38 @@
   "engines": {
     "bun": ">=1.3.0"
   },
-  "workspaces": [
-    "packages/*",
-    "python/*",
-    "crates"
-  ],
+  "workspaces": ["packages/*", "python/*", "crates", "crates/*"],
   "scripts": {
-    "all:build": "turbo run build",
-    "all:lint": "turbo run lint",
-    "all:typecheck": "turbo run typecheck",
-    "all:test": "turbo run test",
-    "all:cov": "turbo run cov",
-    "all:fmt": "turbo run fmt",
-    "all:advisories": "turbo run advisories",
-    "gates": "turbo run build lint typecheck test advisories"
+    "build": "turbo run build",
+    "build:release": "turbo run build:release",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "coverage": "turbo run coverage",
+    "cov": "bun run coverage",
+    "lint": "turbo run lint lint:biome lint:actions",
+    "fmt": "turbo run fmt fmt:biome",
+    "advisories": "turbo run advisories",
+    "dev": "turbo run dev",
+    "all:build": "bun run build",
+    "all:lint": "bun run lint",
+    "all:typecheck": "bun run typecheck",
+    "all:test": "bun run test",
+    "all:cov": "bun run coverage",
+    "all:fmt": "bun run fmt",
+    "all:advisories": "bun run advisories",
+    "gates": "turbo run lint lint:biome lint:actions typecheck test",
+    "lint:biome": "biome check .",
+    "lint:actions": "actionlint",
+    "fmt:biome": "biome format --write .",
+    "lint:rust": "turbo run lint --filter=@nadir/rust --filter=@nadir/rust-*",
+    "test:rust": "turbo run test --filter=@nadir/rust-*",
+    "test:affected": "turbo run test --affected",
+    "lint:affected": "turbo run lint lint:biome lint:actions --affected",
+    "build:native": "turbo run build:native --filter=@nadir/sdk",
+    "build:native:release": "turbo run build:native:release --filter=@nadir/sdk"
   },
   "devDependencies": {
+    "@biomejs/biome": "1.9.4",
     "backlog.md": "^1.53.0",
     "skills": "^1.7.0",
     "turbo": "2.11.5"
