@@ -1,89 +1,101 @@
-//! The 16 stable traits: the API boundary between the pipeline and its engines
-//! (ADR-007, `architecture/engine-registry.md`).
+//! Engine trait vocabulary shared by planners, executors and adapters.
 //!
-//! The pipeline knows only these method signatures. Engine-specific CLI flags live inside
-//! adapters, and the pipeline never sees them — which is what makes engine swapping, stage
-//! caching and parallel DAG branches possible rather than aspirational.
-//!
-//! Every trait extends [`Engine`], so the registry can ask any adapter what it is and what
-//! version it is without knowing which trait it implements. That is not decoration: the
-//! engine version is part of the artifact hash, and the hash is what makes caching correct.
-//!
-//! Signatures are `async` here and synchronous in the KB, because the adapters are
-//! subprocesses and a synchronous `fn` that blocks a thread for 40 minutes is a design
-//! that only works until the DAG runs two branches at once (ADR-005). The trait *surface*
-//! — the names, the config structs, the one-method-per-stage shape — is the KB's.
+//! Nadir keeps engine-specific command-line flags inside adapters. The public surface here
+//! names the stable domain operations, the config each operation receives, the artifacts it
+//! reads and writes, and the preflight metadata a registry can query without running a
+//! stage.
 
+use std::future::Future;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::artifact::{Artifact, ArtifactHash};
+use crate::artifact::Artifact;
 
-/// The base trait all sixteen extend: what this adapter is, and what it can do.
+/// Result type shared by every engine trait method.
+pub type EngineResult<T> = Result<T, EngineError>;
+
+/// Object-safe future returned by stage traits.
 ///
-/// `version` is not a diagnostic string. It is an input to the artifact hash
-/// ([`crate::artifact::ArtifactHash::of_task`]), so upgrading an adapter invalidates
-/// everything it produced. That is the difference between a cache and a bug report.
+/// Traits return a boxed future instead of using `async fn` directly so registries can hold
+/// `dyn FeatureExtractor`, `dyn SparseReconstructor`, and the other stage trait objects
+/// while adapters remain free to perform asynchronous subprocess work.
+pub type EngineFuture<'a, T> = Pin<Box<dyn Future<Output = EngineResult<T>> + Send + 'a>>;
+
+/// Callback an adapter uses to report progress without owning the UI.
+pub type ProgressSink<'a> = &'a (dyn Fn(Progress) + Send + Sync + 'a);
+
+/// The base trait all stage traits extend: what this adapter is, and what it can do.
+///
+/// `version` is part of artifact identity. A caller can query the name, version and
+/// capabilities before deciding whether to execute any stage.
 pub trait Engine: Send + Sync + 'static {
-    /// The engine's name, as it appears in a pipeline's `engine = "colmap"` field.
+    /// The engine name as it appears in a pipeline definition.
     fn name(&self) -> &str;
 
-    /// The version string that goes into the artifact hash. Must change whenever the
-    /// adapter's output could change — which includes a change in the engine's own
-    /// version, not just the adapter's code.
+    /// Version string that participates in task hashing.
     fn version(&self) -> &str;
 
-    /// What this engine can do. The registry consults it to fail at plan time rather than
-    /// 40 minutes into a run.
+    /// Stage capabilities and hardware requirements advertised at preflight time.
     fn capabilities(&self) -> EngineCapabilities;
 }
 
-/// Which stages an engine implements.
-///
-/// A bag of booleans rather than a set of enum variants: it is derived data about an
-/// adapter, the registry intersects it with what a pipeline needs, and the report names
-/// the missing capability directly.
+/// Stage capabilities and hardware requirements advertised by an engine.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct EngineCapabilities {
+    /// Whether the engine can extract image features.
     pub feature_extraction: bool,
+    /// Whether the engine can match extracted features.
     pub feature_matching: bool,
+    /// Whether the engine can run sparse reconstruction.
     pub sfm: bool,
+    /// Whether the engine can produce dense point clouds.
     pub dense_reconstruction: bool,
+    /// Whether the engine can build meshes.
     pub meshing: bool,
+    /// Whether the engine can texture meshes.
     pub texturing: bool,
+    /// Whether the engine can georeference a scene.
     pub georeferencing: bool,
+    /// Whether the engine can generate elevation rasters.
     pub dem: bool,
+    /// Whether the engine can orthorectify and mosaic imagery.
     pub orthomosaic: bool,
-    /// Cannot run without a GPU. Checked at plan time — a GPU stage that fails at run time
-    /// fails after the two hours of SfM that precede it.
+    /// Whether the advertised capabilities require GPU hardware.
     pub requires_gpu: bool,
+    /// Whether the engine can use CUDA when present.
     pub supports_cuda: bool,
 }
 
 /// Progress a long-running engine reports back while it works.
-///
-/// Engines report a fraction where they can (PDAL knows its own point count) and a stage
-/// where they cannot (COLMAP's mapper prints stages, not percentages). Reporting "stage 3
-/// of 5" rather than fabricating a percentage is the honest mapping, and `indicatif`
-/// renders it as a spinner with a label.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Progress {
     /// A fraction in `0.0..=1.0`, where the engine knows its denominator.
-    Fraction { completed: f64 },
-    /// A named stage with no denominator. `index`/`total` are 1-based; `total == 0` means
-    /// the engine does not know.
-    Stage { name: String, index: usize, total: usize },
-    /// A free-form line for the log. Not progress: the caller decides whether to show it.
-    Message { text: String },
+    Fraction {
+        /// Completed fraction.
+        completed: f64,
+    },
+    /// A named stage with a one-based index and optional total.
+    Stage {
+        /// Human-readable stage name.
+        name: String,
+        /// One-based stage index.
+        index: usize,
+        /// Total stages, or zero when the engine does not know.
+        total: usize,
+    },
+    /// A free-form log line.
+    Message {
+        /// Message text.
+        text: String,
+    },
 }
 
 impl Progress {
-    /// The fraction to render, where one is known. `None` means indeterminate, which
-    /// `indicatif` draws as a spinner rather than a bar that lies about its position.
+    /// Return a renderable fraction when the progress event knows one.
     pub fn fraction(&self) -> Option<f64> {
         match self {
             Progress::Fraction { completed } => Some(*completed),
@@ -95,58 +107,58 @@ impl Progress {
     }
 }
 
-/// Something went wrong inside an engine adapter.
-///
-/// One type for the whole trait surface on purpose. A caller that has to handle sixteen
-/// error enums cannot usefully match on any of them; it can only log and give up, which is
-/// what it does anyway. The variants carry which engine and which stage, which is what
-/// `nadir report` needs.
+/// Shared error vocabulary for engine adapters.
 #[derive(Debug, thiserror::Error)]
 pub enum EngineError {
-    /// The engine's binary is not on PATH. Split out because it is an environment problem
-    /// with a different remedy than a failure inside the engine, and because `nadir engines`
-    /// can preflight every adapter for this one case.
+    /// The engine binary is not installed or not visible on `PATH`.
     #[error("{engine} is not installed or not on PATH")]
-    NotInstalled { engine: &'static str },
-    /// The engine ran and exited non-zero.
+    NotInstalled {
+        /// Engine name.
+        engine: &'static str,
+    },
+    /// The engine ran and exited unsuccessfully.
     #[error("{engine} failed in stage {stage}: {message}")]
     Failed {
+        /// Engine name.
         engine: &'static str,
+        /// Stage name.
         stage: &'static str,
+        /// Adapter-provided failure detail.
         message: String,
     },
-    /// The engine's output could not be parsed. Common when an engine's output format
-    /// changes between versions — which is why the engine version is part of the artifact
-    /// hash and not only a log line.
+    /// The adapter could not parse the engine output.
     #[error("could not parse {engine} output in stage {stage}: {message}")]
     Parse {
+        /// Engine name.
         engine: &'static str,
+        /// Stage name.
         stage: &'static str,
+        /// Parser failure detail.
         message: String,
     },
-    /// The engine exceeded its resource budget and was stopped.
+    /// The engine exceeded a resource limit.
     #[error("{engine} exceeded its {resource} budget in stage {stage}")]
     BudgetExceeded {
+        /// Engine name.
         engine: &'static str,
+        /// Stage name.
         stage: &'static str,
+        /// Resource that exceeded its budget.
         resource: &'static str,
     },
 }
 
 /// A handle an engine receives to reach the workspace.
-///
-/// Cancellation goes through the context rather than through killing the process directly,
-/// so an adapter can flush its own state and exit with a resumable workspace — which is
-/// what makes `nadir resume` possible at all.
 #[derive(Debug, Clone)]
 pub struct Context {
     /// Workspace root: where artifacts, caches and adapter scratch space live.
     pub workspace: PathBuf,
-    /// Per-run scratch. Adapters write here; it is safe to delete between runs.
+    /// Per-run scratch directory. Adapters may write temporary files here.
     pub scratch: PathBuf,
 }
 
 impl Context {
+    /// Build a context rooted at `workspace`.
     pub fn new(workspace: impl Into<PathBuf>) -> Self {
         let workspace = workspace.into();
         let scratch = workspace.join("scratch");
@@ -161,18 +173,17 @@ impl Context {
     }
 }
 
-/// The outcome every trait returns: artifacts produced, and how they were made.
+/// The outcome every stage returns: artifacts produced and adapter provenance.
 #[derive(Debug, Clone)]
 pub struct Produced {
-    /// The artifacts this call produced, in the order the trait documents.
+    /// Artifacts this call produced, in the order the trait documents.
     pub artifacts: Vec<Artifact>,
-    /// Anything worth recording for `nadir explain`.
+    /// Provenance worth recording for `nadir explain`.
     pub provenance: Provenance,
 }
 
 impl Produced {
-    /// A result with one artifact and no provenance filled in yet — what an adapter
-    /// returns before it has read the engine's version.
+    /// Build a produced result with one artifact and empty provenance.
     pub fn one(artifact: Artifact) -> Self {
         Self {
             artifacts: vec![artifact],
@@ -181,383 +192,428 @@ impl Produced {
     }
 }
 
-/// What an adapter records about how it ran an engine.
+/// Adapter provenance recorded alongside produced artifacts.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Provenance {
-    /// The engine binary and version, as reported. Part of the artifact hash.
+    /// Engine binary and version as reported by the adapter.
     pub engine_version: String,
-    /// The exact argv, so a failure is reproducible by hand.
+    /// Exact command line used to reproduce a subprocess invocation.
     pub command: Vec<String>,
+    /// Runtime duration in milliseconds.
     pub duration_ms: u64,
-    /// Peak resident memory, where the platform reports it. `None` on Linux without
-    /// `wait4`, and that is preferable to reporting a number nobody measured.
+    /// Peak resident memory when the platform can report it.
     pub peak_rss_bytes: Option<u64>,
 }
 
-// ── Domain 1: Dataset (1 trait) ──────────────────────────────────────────────
+// ── Domain 1: Dataset ────────────────────────────────────────────────────────
 
+/// Configuration for ingesting an image directory.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IngestConfig {
     /// Image extensions to accept.
     pub extensions: Vec<String>,
-    /// Require GPS in EXIF. Off by default: a flight without RTK still processes, it just
-    /// georeferences from the SfM GPS solution instead — worse, and a warning rather than
-    /// a refusal.
+    /// Whether GPS EXIF is mandatory.
     pub require_gps: bool,
-    /// Reject an image whose EXIF cannot be read. Off: one corrupt file among 1,284 is a
-    /// warning and a dropped image, not a failed run.
+    /// Whether unreadable EXIF should fail the whole ingest.
     pub strict_exif: bool,
 }
 
-/// What `nadir inspect` reports.
+/// What dataset inspection reports without producing artifacts.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct DatasetReport {
+    /// Number of usable images.
     pub images: usize,
+    /// Camera models encountered in the dataset.
     pub cameras: Vec<String>,
+    /// Number of images carrying GPS data.
     pub images_with_gps: usize,
+    /// Whether RTK-quality positioning is present.
     pub has_rtk: bool,
-    /// Ground sample distance in metres per pixel, estimated from flight geometry.
+    /// Estimated ground sample distance in metres per pixel.
     pub gsd_metres: Option<f64>,
+    /// Warnings or validation findings.
     pub issues: Vec<String>,
 }
 
-#[async_trait]
+/// Provides image datasets to the pipeline.
 pub trait ImageProvider: Engine {
     /// Ingest a directory of images into a validated dataset.
-    async fn ingest(
-        &self,
-        path: &Path,
-        cfg: &IngestConfig,
-        ctx: &Context,
-        progress: &dyn Fn(Progress),
-    ) -> Result<Produced, EngineError>;
+    fn ingest<'a>(
+        &'a self,
+        path: &'a Path,
+        cfg: &'a IngestConfig,
+        ctx: &'a Context,
+        progress: ProgressSink<'a>,
+    ) -> EngineFuture<'a, Produced>;
 
-    /// Report a dataset's geometry without producing anything.
-    async fn inspect(&self, path: &Path) -> Result<DatasetReport, EngineError>;
+    /// Report a dataset's geometry without producing artifacts.
+    fn inspect<'a>(&'a self, path: &'a Path) -> EngineFuture<'a, DatasetReport>;
 }
 
-// ── Domain 2: Reconstruction (6 traits) ──────────────────────────────────────
+// ── Domain 2: Reconstruction ────────────────────────────────────────────────
 
+/// Configuration for feature extraction.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeatureConfig {
+    /// Maximum number of features per image.
     pub max_features: usize,
-    /// Detection threshold. Lower finds more features and more noise; this is the knob
-    /// `nadir process --quality` turns.
+    /// Detection threshold. Lower finds more features and more noise.
     pub detection_threshold: f64,
 }
 
+/// Configuration for feature matching.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MatchingConfig {
+    /// Maximum descriptor distance accepted as a match.
     pub max_distance: f64,
-    /// Run a second guided-matching pass. Expensive, materially better.
+    /// Whether to run a second guided-matching pass.
     pub guided_matching: bool,
+    /// Worker threads requested by the adapter.
     pub num_threads: usize,
 }
 
+/// Configuration for sparse reconstruction.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SfMConfig {
+    /// Minimum inliers for an accepted registration.
     pub min_num_inliers: usize,
+    /// Number of initial image registration pairs to try.
     pub init_image_reg_pairs: usize,
+    /// Whether bundle adjustment may refine focal length.
     pub ba_refine_focal_length: bool,
-    /// Triangulation threshold as a multiple of the image's pixel scale.
+    /// Triangulation threshold as a multiple of image pixel scale.
     pub triangulation_threshold: f64,
 }
 
+/// Configuration for dense reconstruction.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DenseConfig {
+    /// Number of source views used for depth fusion.
     pub num_views: usize,
+    /// Minimum accepted depth.
     pub depth_min: f64,
+    /// Maximum accepted depth.
     pub depth_max: f64,
+    /// Consistency threshold for accepting dense points.
     pub consistency_threshold: f64,
 }
 
+/// Configuration for mesh generation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeshConfig {
+    /// Reconstruction depth.
     pub depth: u8,
+    /// Surface scale parameter.
     pub scale: f64,
+    /// Whether to use linear fitting.
     pub linear_fit: bool,
 }
 
+/// Configuration for mesh texturing.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextureConfig {
+    /// Output texture resolution.
     pub resolution: u32,
-    /// Global seam-leveling before blending. Visible in the output at high overlap.
+    /// Whether to apply global seam leveling before blending.
     pub global_seam_leveling: bool,
+    /// Worker threads requested by the adapter.
     pub num_threads: usize,
 }
 
-#[async_trait]
+/// Extracts image features.
 pub trait FeatureExtractor: Engine {
-    async fn extract(
-        &self,
-        images: &Artifact,
-        cfg: &FeatureConfig,
-        ctx: &Context,
-        progress: &dyn Fn(Progress),
-    ) -> Result<Produced, EngineError>;
+    /// Extract feature descriptors from an image dataset artifact.
+    fn extract<'a>(
+        &'a self,
+        images: &'a Artifact,
+        cfg: &'a FeatureConfig,
+        ctx: &'a Context,
+        progress: ProgressSink<'a>,
+    ) -> EngineFuture<'a, Produced>;
 }
 
-#[async_trait]
+/// Matches image features.
 pub trait FeatureMatcher: Engine {
-    async fn match_features(
-        &self,
-        features: &Artifact,
-        cfg: &MatchingConfig,
-        ctx: &Context,
-        progress: &dyn Fn(Progress),
-    ) -> Result<Produced, EngineError>;
+    /// Match feature descriptors into an image correspondence graph.
+    fn match_features<'a>(
+        &'a self,
+        features: &'a Artifact,
+        cfg: &'a MatchingConfig,
+        ctx: &'a Context,
+        progress: ProgressSink<'a>,
+    ) -> EngineFuture<'a, Produced>;
 }
 
-#[async_trait]
+/// Reconstructs sparse scenes from matched features.
 pub trait SparseReconstructor: Engine {
-    async fn reconstruct(
-        &self,
-        matches: &Artifact,
-        cfg: &SfMConfig,
-        ctx: &Context,
-        progress: &dyn Fn(Progress),
-    ) -> Result<Produced, EngineError>;
+    /// Build a sparse reconstruction from matched features.
+    fn reconstruct<'a>(
+        &'a self,
+        matches: &'a Artifact,
+        cfg: &'a SfMConfig,
+        ctx: &'a Context,
+        progress: ProgressSink<'a>,
+    ) -> EngineFuture<'a, Produced>;
 }
 
-#[async_trait]
+/// Produces dense point clouds from sparse scenes.
 pub trait DenseReconstructor: Engine {
-    async fn densify(
-        &self,
-        scene: &Artifact,
-        cfg: &DenseConfig,
-        ctx: &Context,
-        progress: &dyn Fn(Progress),
-    ) -> Result<Produced, EngineError>;
+    /// Produce a dense point cloud from a sparse scene.
+    fn densify<'a>(
+        &'a self,
+        scene: &'a Artifact,
+        cfg: &'a DenseConfig,
+        ctx: &'a Context,
+        progress: ProgressSink<'a>,
+    ) -> EngineFuture<'a, Produced>;
 }
 
-#[async_trait]
+/// Builds meshes from dense point clouds.
 pub trait MeshGenerator: Engine {
-    async fn mesh(
-        &self,
-        cloud: &Artifact,
-        cfg: &MeshConfig,
-        ctx: &Context,
-        progress: &dyn Fn(Progress),
-    ) -> Result<Produced, EngineError>;
+    /// Build a mesh from a dense point cloud.
+    fn mesh<'a>(
+        &'a self,
+        cloud: &'a Artifact,
+        cfg: &'a MeshConfig,
+        ctx: &'a Context,
+        progress: ProgressSink<'a>,
+    ) -> EngineFuture<'a, Produced>;
 }
 
-#[async_trait]
+/// Textures meshes with source imagery.
 pub trait TextureGenerator: Engine {
-    async fn texture(
-        &self,
-        mesh: &Artifact,
-        images: &Artifact,
-        cfg: &TextureConfig,
-        ctx: &Context,
-        progress: &dyn Fn(Progress),
-    ) -> Result<Produced, EngineError>;
+    /// Project source images onto a mesh.
+    fn texture<'a>(
+        &'a self,
+        mesh: &'a Artifact,
+        images: &'a Artifact,
+        cfg: &'a TextureConfig,
+        ctx: &'a Context,
+        progress: ProgressSink<'a>,
+    ) -> EngineFuture<'a, Produced>;
 }
 
-// ── Domain 3: Geometry (2 traits) ────────────────────────────────────────────
+// ── Domain 3: Geometry ──────────────────────────────────────────────────────
 
+/// Configuration for georeferencing.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeorefConfig {
-    /// Ground control points. Empty means "derive from the SfM GPS solution", which is
-    /// worse, and `nadir report` says which of the two produced the georeference.
+    /// Ground control points. Empty means derive from the SfM GPS solution.
     pub ground_control_points: Vec<GroundControlPoint>,
     /// Target CRS as an EPSG code or a PROJ string.
     pub target_crs: String,
 }
 
+/// A ground control point linking an image pixel to a real-world coordinate.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GroundControlPoint {
+    /// Source image path.
     pub image: PathBuf,
+    /// Pixel x coordinate.
     pub x_pixel: f64,
+    /// Pixel y coordinate.
     pub y_pixel: f64,
+    /// Target easting.
     pub easting: f64,
+    /// Target northing.
     pub northing: f64,
+    /// Target elevation when known.
     pub elevation: Option<f64>,
 }
 
-#[async_trait]
+/// Georeferences reconstructed scenes.
 pub trait Georeferencer: Engine {
-    async fn georeference(
-        &self,
-        scene: &Artifact,
-        gps: &Artifact,
-        cfg: &GeorefConfig,
-        ctx: &Context,
-    ) -> Result<Produced, EngineError>;
+    /// Align a scene into the requested coordinate reference system.
+    fn georeference<'a>(
+        &'a self,
+        scene: &'a Artifact,
+        gps: &'a Artifact,
+        cfg: &'a GeorefConfig,
+        ctx: &'a Context,
+    ) -> EngineFuture<'a, Produced>;
 }
 
-/// A WGS84-ish geodetic point. Kept distinct from `geo-types`' `Point<f64>` so a trait
-/// signature says which CRS it is in; a `Point<f64>` at a CRS boundary is the bug this
-/// naming prevents.
+/// A WGS84-like geodetic point.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct GeoPoint {
+    /// Longitude in degrees.
     pub longitude: f64,
+    /// Latitude in degrees.
     pub latitude: f64,
+    /// Elevation in metres.
     pub elevation: f64,
 }
 
-#[async_trait]
+/// Transforms coordinates between reference systems.
 pub trait CoordinateTransformer: Engine {
     /// Transform one point.
-    async fn transform(&self, point: GeoPoint) -> Result<GeoPoint, EngineError>;
+    fn transform<'a>(&'a self, point: GeoPoint) -> EngineFuture<'a, GeoPoint>;
 
     /// Transform many points in place.
-    ///
-    /// A separate method rather than a convenience default over `transform`: PROJ can
-    /// transform a batch on the worker pool, and the default `transform` one at a time
-    /// turns a 4-million-point reprojection into four million sequential calls.
-    async fn transform_many(&self, points: &mut [GeoPoint]) -> Result<(), EngineError>;
+    fn transform_many<'a>(&'a self, points: &'a mut [GeoPoint]) -> EngineFuture<'a, ()>;
 }
 
-// ── Domain 4: Surface (3 traits) ─────────────────────────────────────────────
+// ── Domain 4: Surface ───────────────────────────────────────────────────────
 
+/// Configuration for point cloud filtering.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilterConfig {
     /// Remove statistical outliers beyond this many standard deviations.
     pub outlier_k: u32,
 }
 
+/// Configuration for point cloud classification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClassifyConfig {
-    /// Ground classification needed for a DTM, and unnecessary work for a DSM.
+    /// Whether to classify ground points for DTM generation.
     pub classify_ground: bool,
 }
 
+/// Configuration for elevation raster generation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DemConfig {
+    /// Output resolution in metres.
     pub resolution_metres: f64,
-    /// Fill holes by interpolation. Off for a DSM — a hole is missing data — and on for a
-    /// DTM, where a hole under vegetation is an estimate and the estimate is the product.
+    /// Whether to fill holes by interpolation.
     pub fill_holes: bool,
+    /// Maximum hole radius eligible for interpolation.
     pub max_hole_radius_metres: f64,
 }
 
-#[async_trait]
+/// Filters point clouds.
 pub trait PointCloudFilter: Engine {
-    async fn filter(
-        &self,
-        cloud: &Artifact,
-        cfg: &FilterConfig,
-        ctx: &Context,
-        progress: &dyn Fn(Progress),
-    ) -> Result<Produced, EngineError>;
+    /// Remove outliers from a point cloud.
+    fn filter<'a>(
+        &'a self,
+        cloud: &'a Artifact,
+        cfg: &'a FilterConfig,
+        ctx: &'a Context,
+        progress: ProgressSink<'a>,
+    ) -> EngineFuture<'a, Produced>;
 }
 
-#[async_trait]
+/// Classifies point clouds.
 pub trait PointCloudClassifier: Engine {
-    async fn classify(
-        &self,
-        cloud: &Artifact,
-        cfg: &ClassifyConfig,
-        ctx: &Context,
-        progress: &dyn Fn(Progress),
-    ) -> Result<Produced, EngineError>;
+    /// Classify point-cloud points into domain classes such as ground.
+    fn classify<'a>(
+        &'a self,
+        cloud: &'a Artifact,
+        cfg: &'a ClassifyConfig,
+        ctx: &'a Context,
+        progress: ProgressSink<'a>,
+    ) -> EngineFuture<'a, Produced>;
 }
 
-#[async_trait]
+/// Generates elevation rasters.
 pub trait SurfaceGenerator: Engine {
-    async fn generate_dsm(
-        &self,
-        cloud: &Artifact,
-        cfg: &DemConfig,
-        ctx: &Context,
-        progress: &dyn Fn(Progress),
-    ) -> Result<Produced, EngineError>;
+    /// Generate a digital surface model.
+    fn generate_dsm<'a>(
+        &'a self,
+        cloud: &'a Artifact,
+        cfg: &'a DemConfig,
+        ctx: &'a Context,
+        progress: ProgressSink<'a>,
+    ) -> EngineFuture<'a, Produced>;
 
-    async fn generate_dtm(
-        &self,
-        cloud: &Artifact,
-        cfg: &DemConfig,
-        ctx: &Context,
-        progress: &dyn Fn(Progress),
-    ) -> Result<Produced, EngineError>;
+    /// Generate a digital terrain model.
+    fn generate_dtm<'a>(
+        &'a self,
+        cloud: &'a Artifact,
+        cfg: &'a DemConfig,
+        ctx: &'a Context,
+        progress: ProgressSink<'a>,
+    ) -> EngineFuture<'a, Produced>;
 }
 
-// ── Domain 5: Cartography (2 traits) ─────────────────────────────────────────
+// ── Domain 5: Cartography ───────────────────────────────────────────────────
 
+/// Configuration for orthorectification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrthoConfig {
+    /// Output resolution in metres.
     pub resolution_metres: f64,
-    /// Cloud-Optimized GeoTIFF rather than plain GeoTIFF: the product is streamed to a
-    /// browser, and a tiled COG is what makes that possible without rewriting the file.
+    /// Whether to write Cloud-Optimized GeoTIFFs.
     pub cloud_optimized: bool,
+    /// Worker threads requested by the adapter.
     pub num_threads: usize,
 }
 
+/// Configuration for mosaicking.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MosaicConfig {
+    /// Tile size in pixels.
     pub tile_size_pixels: usize,
     /// XYZ pyramid levels for the web map.
     pub pyramid_levels: Vec<usize>,
 }
 
-#[async_trait]
+/// Orthorectifies source imagery.
 pub trait Orthorectifier: Engine {
-    async fn orthorectify(
-        &self,
-        images: &Artifact,
-        scene: &Artifact,
-        surface: &Artifact,
-        cfg: &OrthoConfig,
-        ctx: &Context,
-        progress: &dyn Fn(Progress),
-    ) -> Result<Produced, EngineError>;
+    /// Orthorectify images against a georeferenced scene and surface.
+    fn orthorectify<'a>(
+        &'a self,
+        images: &'a Artifact,
+        scene: &'a Artifact,
+        surface: &'a Artifact,
+        cfg: &'a OrthoConfig,
+        ctx: &'a Context,
+        progress: ProgressSink<'a>,
+    ) -> EngineFuture<'a, Produced>;
 }
 
-#[async_trait]
+/// Mosaics orthorectified rasters.
 pub trait Mosaicker: Engine {
-    async fn mosaic(
-        &self,
-        orthos: &Artifact,
-        cfg: &MosaicConfig,
-        ctx: &Context,
-        progress: &dyn Fn(Progress),
-    ) -> Result<Produced, EngineError>;
+    /// Build a web-map mosaic from orthorectified rasters.
+    fn mosaic<'a>(
+        &'a self,
+        orthos: &'a [Artifact],
+        cfg: &'a MosaicConfig,
+        ctx: &'a Context,
+        progress: ProgressSink<'a>,
+    ) -> EngineFuture<'a, Produced>;
 }
 
-// ── I/O (2 traits) ───────────────────────────────────────────────────────────
+// ── I/O ─────────────────────────────────────────────────────────────────────
 
-#[async_trait]
+/// Reads and writes raster artifacts.
 pub trait RasterStore: Engine {
-    async fn read(&self, path: &Path) -> Result<Produced, EngineError>;
-    async fn write(&self, raster: &Artifact, path: &Path) -> Result<(), EngineError>;
+    /// Read a raster artifact from storage.
+    fn read<'a>(&'a self, path: &'a Path) -> EngineFuture<'a, Produced>;
+
+    /// Write a raster artifact to storage.
+    fn write<'a>(&'a self, raster: &'a Artifact, path: &'a Path) -> EngineFuture<'a, ()>;
 }
 
-#[async_trait]
+/// Reads and writes point cloud artifacts.
 pub trait PointCloudStore: Engine {
-    async fn read(&self, path: &Path) -> Result<Produced, EngineError>;
-    async fn write(&self, cloud: &Artifact, path: &Path) -> Result<(), EngineError>;
+    /// Read a point cloud artifact from storage.
+    fn read<'a>(&'a self, path: &'a Path) -> EngineFuture<'a, Produced>;
+
+    /// Write a point cloud artifact to storage.
+    fn write<'a>(&'a self, cloud: &'a Artifact, path: &'a Path) -> EngineFuture<'a, ()>;
 }
 
-/// The sixteen trait names, in the KB's order. ADR-007 says sixteen; this array is the
-/// check that keeps the sentence true, because `nadir explain --traits` prints it and the
-/// count is part of the architecture's public description.
+/// The sixteen trait names, in the architecture's public order.
 pub const TRAIT_NAMES: [&str; 16] = [
-    // Domain 1: Dataset
     "ImageProvider",
-    // Domain 2: Reconstruction
     "FeatureExtractor",
     "FeatureMatcher",
     "SparseReconstructor",
     "DenseReconstructor",
     "MeshGenerator",
     "TextureGenerator",
-    // Domain 3: Geometry
     "Georeferencer",
     "CoordinateTransformer",
-    // Domain 4: Surface
     "PointCloudFilter",
     "PointCloudClassifier",
     "SurfaceGenerator",
-    // Domain 5: Cartography
     "Orthorectifier",
     "Mosaicker",
-    // I/O
     "RasterStore",
     "PointCloudStore",
 ];
 
-/// How many of the sixteen a capability set covers. Used by `nadir plan` to report what a
-/// pipeline cannot run with the engines actually installed.
+/// Count how many processing-stage capabilities an engine advertises.
 pub fn covered_capabilities(caps: &EngineCapabilities) -> usize {
     let flags = [
         caps.feature_extraction,
@@ -594,8 +650,6 @@ mod tests {
 
     #[test]
     fn a_message_is_not_progress() {
-        // No fraction, so indicatif draws a spinner rather than a bar that invents a
-        // position. That distinction is the reason this is an enum.
         let progress = Progress::Message {
             text: "loading image".to_owned(),
         };
@@ -609,17 +663,11 @@ mod tests {
             index: 1,
             total: 0,
         };
-        assert_eq!(
-            progress.fraction(),
-            None,
-            "an unknown total must be indeterminate, not a division by zero"
-        );
+        assert_eq!(progress.fraction(), None);
     }
 
     #[test]
     fn a_missing_engine_is_distinguishable_from_a_failure() {
-        // The distinction the executor branches on: `NotInstalled` is a preflight finding,
-        // `Failed` is a run that started.
         let error = EngineError::NotInstalled { engine: "colmap" };
         assert!(error.to_string().contains("not installed"));
         assert!(!matches!(error, EngineError::Failed { .. }));
@@ -627,8 +675,6 @@ mod tests {
 
     #[test]
     fn a_parse_failure_names_the_engine_and_stage() {
-        // `nadir report` reads these two fields to say which adapter needs attention, so
-        // they must survive formatting.
         let error = EngineError::Parse {
             engine: "colmap",
             stage: "mapper",
@@ -661,11 +707,7 @@ mod tests {
 
     #[test]
     fn the_trait_surface_is_sixteen() {
-        assert_eq!(
-            TRAIT_NAMES.len(),
-            16,
-            "ADR-007 fixes this number; a seventeenth trait must edit this array on purpose"
-        );
+        assert_eq!(TRAIT_NAMES.len(), 16);
     }
 
     #[test]
@@ -689,8 +731,6 @@ mod tests {
 
     #[test]
     fn capabilities_ignore_gpu_flags_when_counting_stages() {
-        // `requires_gpu`/`supports_cuda` describe the hardware, not a stage, so they must
-        // not inflate the count or `nadir plan` would claim coverage that is not there.
         let caps = EngineCapabilities {
             sfm: true,
             requires_gpu: true,
