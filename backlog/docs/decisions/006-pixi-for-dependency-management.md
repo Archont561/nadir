@@ -139,7 +139,7 @@ default = { features = ["rust", "js", "python", "engines", "build", "utils"] }
 # package for it, and a manifest naming one fails to solve outright:
 # "No candidates were found for openmvs >=2.2". `pixi run build-openmvs`
 # compiles it from source; a binary installed that way is only offline-
-# restorable if a `pixi run sandbox-pack` ran afterwards.
+# restorable if the pixi-sandbox CLI packs that environment afterwards.
 ```
 
 ### Developer onboarding

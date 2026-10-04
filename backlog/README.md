@@ -9,6 +9,6 @@ planning records that explain why those items exist.
 - `docs/roadmaps/` — version roadmaps and milestone detail.
 - `docs/plans/` — time-bound delivery plans.
 
-Use `pixi run backlog task list --plain` to inspect work and the Backlog.md CLI to mutate
+Use `pixi run bun x --bun backlog task list --plain` to inspect work and the Backlog.md CLI to mutate
 front matter. `.knowledge/` deliberately contains durable technical reference only:
 architecture, photogrammetry, deployment, and dependency information.

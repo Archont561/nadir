@@ -316,7 +316,7 @@ rust = ">=1.98.1,<1.99"
 # block below are the single entry point into it, so `pixi run test` still runs every
 # language's tests and a CI step is still one line. What stays outside turbo is the work
 # that is genuinely repository-global — the changelog, the Actions lint, the Rust
-# advisories, the sandbox transport — plus the `setup` a fresh clone needs.
+# advisories and publishing — plus the `setup` a fresh clone needs.
 #
 # NOTE (pixi 0.81): `default-environment` is only accepted on tasks that have a `cmd`.
 # Pure aggregators (setup / gates / ci) omit it and resolve their environment through the
@@ -340,14 +340,6 @@ setup = { description = "Materialise the workspace: bun workspace, Python SDK, g
   "py-install",
   "hooks-install",
 ] }
-# Runs after `setup` from a devcontainer's postCreateCommand, once the editor has attached.
-#
-# Separate from `setup` because the two have different failure modes. `setup` is
-# nondeterministic across machines (a bun or pip network hiccup) and a devcontainer's
-# postCreateCommand failing leaves a container that is built but looks broken. This task
-# only reports: it says what is installed, and it never mutates anything. That makes it safe
-# to re-run to diagnose a container, which is the reason it exists.
-post-create = { cmd = "bash scripts/post-create.sh", description = "Report the state of the devcontainer: tools, engines, and the next command to run" }
 # Assert that every place the project version is written agrees with the one authority.
 #
 # The authority is `[workspace].version` in the root Cargo.toml; everything else — pixi.toml,
@@ -407,44 +399,19 @@ changelog-preview = { cmd = "convco changelog", description = "Print the changel
 # is called by `gates` directly rather than through turbo.
 lint-actions = { cmd = "actionlint", description = "Lint the GitHub Actions workflows" }
 
-# ── agent tooling (root bun workspace) ─────────────────────────────────────────
-# `backlog.md` and `skills` are root devDependencies, not conda packages: they are npm
-# tools on the npm release cadence, and ADR-010 keeps that side of the repository in
-# `bun.lock`.
+# ── Bun entrypoint (root workspace) ───────────────────────────────────────────
+# Every JavaScript CLI goes through one task rather than growing one Pixi task per package:
 #
-# `bun x`, not `bunx`: the conda-forge `bun` package ships no `bunx` shim, so the
-# subcommand form is the only one that resolves here. It prefers the workspace install
-# over the registry, so the committed lockfile still pins what these tasks run.
+#   pixi run bun x --bun backlog task list --plain
+#   pixi run bun x --bun skills list
 #
-# They have to go through bun at all because both binaries carry a `#!/usr/bin/env node`
-# shebang and no environment here provides node (ADR-010). A bare
-# `node_modules/.bin/backlog` fails with `env: node: No such file or directory`; that is
-# the shebang, not a broken install.
-backlog = { cmd = "bun x backlog", depends-on = [
+# `bun x`, not `bunx`: conda-forge's bun package ships no `bunx` shim. `--bun` overrides
+# the tools' `#!/usr/bin/env node` shebangs because ADR-010 deliberately keeps Node.js out
+# of this environment. The dependency materialises the committed root workspace first, so
+# `bun x` resolves the version in bun.lock instead of floating to the registry.
+bun = { cmd = "bun", depends-on = [
   "bun-install",
-], description = "Manage the Markdown project backlog under backlog/" }
-skills = { cmd = "bun x skills", depends-on = [
-  "bun-install",
-], description = "Manage the agent skills under .agents/skills, recorded in skills-lock.json" }
-
-# ── sandbox transport (pixi-sandbox) ───────────────────────────────────────────
-# pack -> doctor -> publish, locally. `pixi-sandbox` is not a conda dependency; it is a
-# static release binary, installed by the checksum-verified one-liner in its README.
-#
-# `cargo_vendor = true` in `.pixi-sandbox.toml`, and `--cargo-vendor` on `sandbox-pack`
-# below. The two are the same setting in two places and are flipped together; a pack that
-# silently dropped the vendored crates would still succeed and still restore a workspace
-# that cannot build, which is the failure this arrangement exists to prevent.
-sandbox-pack = { cmd = "pixi-sandbox pack --repo-root . --envs default --output-dir .sandbox-out --platform linux-64 --fetch-tools --cargo-vendor --self-bin $SANDBOX_SELF_BIN", description = "Pack the offline sandbox transport" }
-sandbox-doctor = { cmd = "pixi-sandbox doctor --branch-location .sandbox-out --verify", description = "Verify a packed transport without writing anything" }
-sandbox-publish = { cmd = "pixi-sandbox publish --input-dir .sandbox-out --branch-name sandbox/developer-linux-64 --remote origin", description = "Publish the transport to its orphan branch" }
-sandbox-restore = { cmd = "bash scripts/restore.sh", description = "Restore the offline sandbox from its orphan branch" }
-# The publish plan is a wire format shared with the publisher, so a malformed bundle must
-# fail a gate rather than a push to the orphan branch. NOT part of `lint`: `pixi-sandbox`
-# is not a conda dependency, so a local `pixi run lint` would fail on a missing binary
-# rather than on a real finding. CI installs it with the SHA-pinned setup action and calls
-# this task as its own step.
-lint-sandbox-plan = { cmd = "pixi-sandbox plan --config .pixi-sandbox.toml", description = "Validate the reviewed sandbox publish plan" }
+], description = "Run Bun and every Bun-hosted workspace CLI" }
 
 # ── publish (conda) ───────────────────────────────────────────────────────────
 # Two tasks, and the split is the point.
@@ -477,8 +444,9 @@ serve = { cmd = "cargo run --release -- serve --port 8080", description = "Start
 # Not a dependency: `openmvs` has no conda-forge package for linux-64, and a manifest
 # naming it fails to solve outright. The source build is the escape hatch
 # `.knowledge/deployment/pixi-setup.md` describes. It needs network access and several
-# minutes, so it is a task nobody runs by accident. Run it once, then pack the sandbox:
-# a binary built into `$CONDA_PREFIX` is only offline-restorable if the pack captured it.
+# minutes, so it is a task nobody runs by accident. Run it once, then pack that same
+# environment with the pixi-sandbox CLI: a binary built into `$CONDA_PREFIX` is only
+# offline-restorable if the pack captured it.
 build-openmvs = { cmd = """
     git clone --depth 1 https://github.com/cdcseacave/openMVS.git "$CONDA_PREFIX/.cache/openmvs" && \
     cmake -B "$CONDA_PREFIX/.cache/openmvs/build" -G Ninja "$CONDA_PREFIX/.cache/openmvs" \
