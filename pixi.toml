@@ -124,7 +124,7 @@ actionlint = ">=1.7.12,<2"
 # ~/.cargo/bin on every fresh clone and every devcontainer, and is absent from the
 # published sandbox branch, so a restored airlock could not run the same gates the
 # developer ran. As conda dependencies they travel with `pixi.lock` in the `default`
-# environment that `.pixi-sandbox.toml` packs.
+# environment that `pixi-sandbox.toml` packs.
 rust = { workspace = true }
 cargo-nextest = { workspace = true }
 cargo-llvm-cov = { workspace = true }
@@ -198,7 +198,7 @@ actionlint = { workspace = true }
 # `.knowledge/deployment/pixi-setup.md` are NOT declared: each is a separate solve that
 # each needs its own sandbox bundle packed, verified and published per platform, and
 # none of them has a line of code to build yet. Adding one is a `[feature.*]` plus an
-# entry here, plus a `[[bundle]]` in `.pixi-sandbox.toml` — the declaration is the cheap
+# entry here, plus a `[[bundle]]` in `pixi-sandbox.toml` — the declaration is the cheap
 # part, the transport is the cost.
 default = { features = [
   "rust",
@@ -246,7 +246,7 @@ homepage = "https://github.com/Archont561/nadir"
 # `pixi-build-rust` runs `cargo install --locked --path . --root $PREFIX`, so the crate must
 # be self-contained and carry its own `Cargo.lock` — it does, at the `Cargo.lock` beside this
 # manifest, because this directory is the Cargo workspace root too. That shared lockfile is
-# also what `.pixi-sandbox.toml`'s `cargo_vendor = true` vendors: one lock, two consumers
+# also what `pixi-sandbox.toml`'s `cargo_vendor = true` vendors: one lock, two consumers
 # (the offline transport and the conda build), and neither can diverge from the other.
 #
 # `--locked` is not optional and not ours to change, which makes the committed `Cargo.lock`

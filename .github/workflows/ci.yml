@@ -31,6 +31,9 @@ env:
   # here, not advisors, so the whole workflow builds with warnings denied.
   RUSTFLAGS: -D warnings
   CARGO_TERM_COLOR: always
+  # Keep sandbox validation on the same exact release and channel as publication.
+  PIXI_SANDBOX_VERSION: 0.5.2
+  PIXI_SANDBOX_CHANNEL: https://prefix.dev/archont561/archont561
 
 jobs:
   gates:
@@ -111,20 +114,21 @@ jobs:
       - name: Install the environment
         run: pixi install --locked -e default
 
-      # `pixi-sandbox` is deliberately not a conda dependency or a Pixi task. The
-      # SHA-pinned setup action puts the release binary on PATH; using that binary directly
-      # keeps transport orchestration out of the project's build task graph. The version is
-      # the same one publish-sandbox.yml uses, so validation and publication share a tool.
+      # `pixi-sandbox` is deliberately not a project dependency or a Pixi task. Install
+      # the exact release from the same channel used by publish-sandbox.yml so validation
+      # and publication interpret the plan with the same tool.
       - name: Install pixi-sandbox
-        uses: Archont561/pixi-sandbox/setup@118d53f07ca7e6bc5c931f1bf6a8d601dcf7a7b9
-        with:
-          version: v0.3.2
+        run: >-
+          pixi global install
+          --channel "$PIXI_SANDBOX_CHANNEL"
+          --channel conda-forge
+          "pixi-sandbox==${PIXI_SANDBOX_VERSION}"
 
       # The sandbox is what lets a customer with no network restore a working nadir. If the
       # plan drifts from the manifest, the failure surfaces here rather than at the
       # customer's first `restore.sh` run.
       - name: Validate the sandbox publish plan
-        run: pixi-sandbox plan --config .pixi-sandbox.toml
+        run: pixi-sandbox plan --config pixi-sandbox.toml
 
   advisories:
     name: advisories
