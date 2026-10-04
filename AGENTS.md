@@ -72,7 +72,7 @@ directory. The cost is that every non-crate directory under `crates/` must be in
 currently `crates/cli` and `crates/.turbo`. The second one is not a typo: turbo writes a
 log directory beside every workspace package, and `crates/package.json` makes `crates/` one.
 
-**`cargo_vendor = true` in `.pixi-sandbox.toml` means the vendored crates are in the
+**`cargo_vendor = true` in `pixi-sandbox.toml` means the vendored crates are in the
 transport.** Every crate in `Cargo.lock` is copied whenever pixi-sandbox packs the bundle.
 Adding a dependency is a size decision, not just a build-time one. It is also what makes an
 airlocked machine able to build the workspace rather than only run the binary.
@@ -175,8 +175,8 @@ by the `publish sandbox` workflow on every push to `main`, so a fresh clone whos
 publish has not finished yet gets `not a valid object name: origin/sandbox/...`.
 
 Pixi-sandbox is a release binary rather than a project dependency, so it has no wrapper
-tasks in `pixi.toml`. CI installs the SHA-pinned binary and runs `pixi-sandbox plan
---config .pixi-sandbox.toml` directly; use `pixi-sandbox doctor --branch-location
+tasks in `pixi.toml`. CI installs the version-pinned binary and runs `pixi-sandbox plan
+--config pixi-sandbox.toml` directly; use `pixi-sandbox doctor --branch-location
 .sandbox-out --verify` to verify a local pack without writing anything.
 
 Never run `pixi-sandbox publish` without reviewing `pixi-sandbox plan` first. Publish writes

@@ -126,7 +126,7 @@ The root `Cargo.lock` therefore serves three consumers that must not diverge:
 | Consumer | Reads it for |
 | --- | --- |
 | `pixi publish` | `--locked`; a stale lock fails the build |
-| `.pixi-sandbox.toml` `cargo_vendor` | vendors every crate into the offline transport |
+| `pixi-sandbox.toml` `cargo_vendor` | vendors every crate into the offline transport |
 | a contributor | the graph `cargo build` reproduces |
 
 One lock, three consequences. Editing a manifest without the lock breaks the offline

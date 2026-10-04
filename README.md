@@ -108,7 +108,7 @@ installs the repository's Git hooks.
 ## 🖥️ Platform and Engine Support
 
 The supported platform list comes from `[workspace].platforms` in `pixi.toml`; the published
-offline bundle is separately reviewed in `.pixi-sandbox.toml`.
+offline bundle is separately reviewed in `pixi-sandbox.toml`.
 
 | Surface | Status | Notes |
 |---------|--------|-------|
@@ -214,7 +214,7 @@ boundary rules.
 | `packages/sdk` | Native TypeScript SDK |
 | `packages/client` | Higher-level TypeScript convenience client |
 | `pixi.toml` / `pixi.lock` | Toolchain, system dependencies, tasks, and exact resolution |
-| `.pixi-sandbox.toml` | Reviewed offline bundle and publish plan |
+| `pixi-sandbox.toml` | Reviewed offline bundle and publish plan |
 | `.devcontainer/` | Official Pixi image plus reproducible container setup |
 | `backlog/` | Tasks, milestones, ADRs, roadmaps, and delivery plans |
 | `.knowledge/` | Durable architecture, domain, deployment, and dependency reference |
@@ -313,7 +313,7 @@ pixi install --frozen --offline
 pixi run --frozen -- cargo build --offline
 ```
 
-The currently published transport uses pixi-sandbox 0.3.2, whose restore writes
+The currently published transport uses pixi-sandbox 0.5.2, whose restore writes
 `.pixi/sandbox-env.sh`; source it in each new shell to put the manifest-verified tools and
 restored environment on `PATH`. The launcher selects the bundle for the host, verifies the
 transport manifest, restores the Pixi environment, and wires Cargo to the vendored crates. If a
@@ -323,7 +323,7 @@ Pixi-sandbox is a release tool rather than a project dependency, so transport op
 its installed binary directly instead of going through wrapper tasks in `pixi.toml`:
 
 ```bash
-pixi-sandbox plan --config .pixi-sandbox.toml
+pixi-sandbox plan --config pixi-sandbox.toml
 pixi-sandbox doctor --branch-location .sandbox-out --verify
 # Review the plan before running pixi-sandbox publish: it writes to origin.
 ```

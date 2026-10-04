@@ -17,7 +17,7 @@ dist/
 # `pixi run sandbox-pack` writes here before `sandbox-doctor` reviews the transport.
 .sandbox-out/
 # What `pixi run sandbox-restore` writes on the airlock side: the vendored crate sources
-# unpacked from the transport. The trailing slash matters — `.pixi-sandbox.toml`, the
+# unpacked from the transport. The trailing slash matters — `pixi-sandbox.toml`, the
 # reviewed plan, is tracked and must stay tracked. Once `cargo_vendor` is true this holds
 # every crate in Cargo.lock.
 .pixi-sandbox/

@@ -104,7 +104,7 @@ Consequences that are rules rather than preferences:
 ### Neutral
 - The `web` feature from `pixi-setup.md` is not declared at all. When a UI lands it is a
   `[feature.web]` plus an `[environments]` entry plus a `[[bundle]]` in
-  `.pixi-sandbox.toml` — and it will carry Bun, not Node.
+  `pixi-sandbox.toml` — and it will carry Bun, not Node.
 
 ## See Also
 

@@ -15,7 +15,7 @@
 #     where a reader looks for a crate's code; its manifest is this file, reached through
 #     `[[bin]] path`.
 #   - The Cargo workspace root is the repository root, so `cargo_vendor` in
-#     `.pixi-sandbox.toml` can be true: an airlocked machine can vendor and build the whole
+#     `pixi-sandbox.toml` can be true: an airlocked machine can vendor and build the whole
 #     workspace, not just restore the toolchain.
 #   - `deny.toml` is here for the same reason: cargo-deny reads it from the workspace root.
 #   - The version of the project is owned by the root pixi.toml. It reaches Cargo through
