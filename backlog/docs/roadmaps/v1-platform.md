@@ -18,7 +18,7 @@ related:
 **Goal:** A flexible, adaptive, resource-aware photogrammetry platform that
 handles diverse mission types on a single machine.
 
-**Timeline:** ~6 months after V0.2.
+**Timeline:** after V0.1 has qualified its sparse/cache boundary; timing is evidence-driven rather than a promise made before the V0 profile is proven.
 
 ### Adaptive Pipeline Planning
 

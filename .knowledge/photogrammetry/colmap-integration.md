@@ -60,12 +60,12 @@ colmap feature_extractor \
     --image_path images/ \
     --ImageReader.camera_model OPENCV \
     --SiftExtraction.max_num_features 8192 \
-    --SiftExtraction.use_gpu true
+    --SiftExtraction.use_gpu false
 
 # 2. Feature matching
 colmap exhaustive_matcher \
     --database_path database.db \
-    --SiftMatching.use_gpu true
+    --SiftMatching.use_gpu false
 
 # 3. Sparse reconstruction
 colmap mapper \

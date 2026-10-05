@@ -14,6 +14,8 @@ related:
 
 # Demo Plan
 
+> **Superseded in part by ADR-012 (2026-10-05).** This remains a later hosted-product exploration. V0 first ships a qualified local sparse-reconstruction profile with no georeferencing, mapping products, worker, UI, or cloud control plane.
+
 ## TL;DR
 
 Build a working Nadir demo in 4 weeks using a **modular monolith with
