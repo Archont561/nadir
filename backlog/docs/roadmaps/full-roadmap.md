@@ -45,7 +45,7 @@ dense or mapping-product claim.
 - [x] Cargo workspace with core crate scaffolding and native binding probes
 - [x] `clap` CLI probes: `process`, `inspect`, `plan`, `engines`, `crates`
 - [x] Shared protocol/dispatcher scaffold for CLI, Python and TypeScript probes
-- [ ] `nadir-artifacts`: invocation keys distinct from verified output-tree manifests
+- [x] `nadir-artifacts`: invocation keys distinct from verified output-tree manifests
 - [ ] `nadir-process`: qualified subprocess runner with typed engine failures
 - [ ] `nadir-dataset`: one immutable bounded calibrated ImageSet snapshot
 - [ ] Runtime qualification: locked Pixi developer profile and digest-pinned OCI user profile

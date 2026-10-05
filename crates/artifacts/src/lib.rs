@@ -1,14 +1,39 @@
 //! nadir-artifacts — Content-addressed artifact storage and the invalidation rules it makes possible.
 //!
-//! **Scaffold.** One constant and one function, so the crate compiles, links into the
-//! workspace, and has a test that fails if the wiring is broken. The real content arrives
-//! with the stage named by [`STAGE`].
+//! The V0 stage cache (ADR-012): invocation keys name requested work,
+//! output-tree manifests name the bytes a stage actually produced, and the
+//! store maps one to the other only after revalidating every byte. A hit
+//! launches no engine subprocess and never hands out a cache path as a user
+//! output — callers receive copies through [`StageCache::materialize`].
 //!
 //! Declared as a workspace member with its own `Cargo.toml` rather than as a directory of
 //! `.rs` files, because a crate that is not a member is not compiled by `cargo build
 //! --workspace`, is not in `Cargo.lock`, and is not in the licence report `pixi run lint`
 //! produces. Adding a crate is one file in its own directory; the workspace notices
 //! (`members = ["crates/*"]` in the repository-root `Cargo.toml`).
+
+/// The labeled-hash encoding shared by this crate's identity types.
+mod hashing;
+
+/// Invocation keys: request identity for a stage execution.
+pub mod invocation;
+
+/// Output-tree manifests: produced-bytes identity and its validation.
+pub mod manifest;
+
+/// The stage cache: staging, atomic promotion, revalidating lookups.
+pub mod store;
+
+/// Re-exported so callers of the stage cache need no second digest vocabulary:
+/// every digest in this crate is an [`nadir_core::ArtifactHash`].
+pub use nadir_core::ArtifactHash;
+
+pub use invocation::{InvocationKey, InvocationSpec, NamedDigest, RuntimeIdentity, Setting};
+pub use manifest::{FileEntry, MANIFEST_FORMAT, ManifestError, OutputTreeManifest, TreeDigest};
+pub use store::{
+    EntryInvalid, Lookup, Promoted, STAGE_ENTRY_FORMAT, StageCache, StageCacheError, StageEntry,
+    StageHit,
+};
 
 /// The pipeline stage this crate exists to implement, as it appears in a pipeline file.
 ///

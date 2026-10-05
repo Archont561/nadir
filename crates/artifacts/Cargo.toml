@@ -24,7 +24,19 @@ categories = ["science::geo"]
 publish = false
 
 [dependencies]
-# None yet. `nadir-core` will be the first: it is the crate every other one depends on.
+# The first dependency this crate was always going to grow: digests and artifact identity
+# come from `nadir-core`, so there is exactly one blake3 implementation and one hex
+# encoding in the workspace. Stage-cache types are new kinds of identity (invocation keys,
+# output-tree digests) *over* `ArtifactHash`, not a second hashing scheme beside it.
+nadir-core.workspace = true
+# Manifests and stage entries are JSON documents on disk: greppable with ordinary tools,
+# and never a binary database an interrupted write can corrupt.
+serde.workspace = true
+serde_json.workspace = true
+# Cache failures are a typed taxonomy (schema-incompatible, mutated, missing, extra), not
+# strings: the executor must be able to tell "not a hit, run the stage" from "the store is
+# corrupt" without parsing error prose.
+thiserror.workspace = true
 
 [lints]
 workspace = true

@@ -6,5 +6,8 @@
   "scripts": {
     "test": "cargo run --quiet --package xtask -- test --package nadir-artifacts",
     "lint": "cargo run --quiet --package xtask -- clippy --package nadir-artifacts"
+  },
+  "dependencies": {
+    "@nadir/rust-core": "workspace:*"
   }
 }
