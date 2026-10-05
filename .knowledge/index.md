@@ -20,6 +20,7 @@ domain.
 - [Engine registry and trait API](architecture/engine-registry.md)
 - [Five computational domains](architecture/five-domains.md)
 - [Pipeline and DAG executor](architecture/pipeline-dag.md)
+- [V0 strict sparse reconstruction profile](architecture/v0-strict-sparse-profile.md)
 - [Worker protocol](architecture/worker-protocol.md)
 
 ## Photogrammetry

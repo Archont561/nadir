@@ -15,6 +15,12 @@ related:
 
 # Worker Protocol
 
+> **V0 clarification (ADR-012):** V0 is CLI-first and does not ship a worker
+> service. Its qualified OCI runtime is an execution containment boundary, not
+> a public remote-worker protocol. HTTP, SDK, and distributed-worker surfaces
+> remain later work. See
+> [V0 strict sparse reconstruction](./v0-strict-sparse-profile.md).
+
 ## TL;DR
 
 The Worker Protocol is the real product boundary of Nadir. It defines how

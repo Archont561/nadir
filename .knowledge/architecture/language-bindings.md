@@ -1,5 +1,9 @@
 # Language binding architecture
 
+> **V0 clarification (ADR-012):** this is the durable binding design, but V0
+> exposes reconstruction through the Rust CLI first. Python and TypeScript
+> reconstruction APIs wait for a qualified workflow contract.
+
 Nadir uses the same monorepo boundary convention as `Archont561/geoquery`: the Rust engine
 is authoritative and language packages are FFI faces, not parallel implementations.
 

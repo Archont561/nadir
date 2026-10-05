@@ -14,6 +14,13 @@ related:
 
 # Artifact Model
 
+> **V0 clarification (ADR-012):** the V0 profile distinguishes an invocation
+> key from every output tree digest, validates a manifest before atomic
+> promotion, and keeps engine-private workspace trees immutable. The compact
+> task-hash examples below describe the long-term model; the accepted V0
+> contract in [V0 strict sparse reconstruction](./v0-strict-sparse-profile.md)
+> takes precedence where they differ.
+
 ## TL;DR
 
 Artifacts are the nodes in the pipeline DAG. Each artifact has a kind, a

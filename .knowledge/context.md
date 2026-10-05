@@ -96,9 +96,10 @@ aerial image.
 ## Current Status
 
 - **Phase:** Early scaffold. CLI shell and native SDK transport compile; pipeline execution is pending.
-- **Next step:** V0.1 MVP — Rust CLI + COLMAP + OpenMVS + GDAL + `nadir serve` mode.
-- **Target demo:** 4 weeks. Railway hosting. Next.js UI. Real drone imagery.
-- **Estimated V0.1 timeline:** 3–4 weeks solo, full-time.
+- **Next step:** V0.1 strict sparse profile — an immutable input snapshot, a qualified CPU-only COLMAP path, and canonical local `SparseScene v1` output.
+- **V0 boundary:** no georeferencing, OpenMVS, PDAL, GDAL, DSM, orthomosaic, GPU profile, or worker service. The accepted contract is [V0 strict sparse reconstruction](architecture/v0-strict-sparse-profile.md).
+- **Exit evidence:** two byte-identical fresh-store fixture runs and a same-store rerun that launches no COLMAP process for cache hits.
+- **Later target:** mapping products, hosting, and language-facing workflow APIs build on explicit contracts after the sparse/cache base is qualified.
 
 ## Naming Conventions
 
@@ -106,7 +107,7 @@ aerial image.
 |---|---|
 | Project | Nadir |
 | CLI binary | `nadir` |
-| CLI commands | `nadir process`, `nadir inspect`, `nadir plan`, `nadir serve`, `nadir resume`, `nadir explain`, `nadir report` |
+| CLI commands | Current scaffold: `nadir process`, `nadir inspect`, `nadir plan`; V0 target: `nadir reconstruct`, `nadir plan`, `nadir status`, `nadir explain`, `nadir cache` |
 | Rust crates | `nadir-cli`, `nadir-core`, `nadir-artifacts`, `nadir-process`, `nadir-pipeline`, `nadir-executor`, `nadir-dataset`, `nadir-reconstruction`, `nadir-geometry`, `nadir-surface`, `nadir-cartography`, `nadir-math` |
 | npm packages | `@nadir/sdk`, `@nadir/protocol` (future) |
 | Python package | `nadir-python` (future) |

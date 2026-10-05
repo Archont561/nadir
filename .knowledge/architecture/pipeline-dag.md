@@ -15,6 +15,12 @@ related:
 
 # Pipeline & DAG Executor
 
+> **V0 clarification (ADR-012):** V0 executes one fixed linear ImageSet →
+> SparseScene profile. Declarative TOML recipes, independently concurrent DAG
+> branches, and adaptive planning remain the architecture for later profiles;
+> they are not V0 exit requirements. See
+> [V0 strict sparse reconstruction](./v0-strict-sparse-profile.md).
+
 ## TL;DR
 
 Pipelines are declarative TOML files describing a DAG of tasks. Each task

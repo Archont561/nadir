@@ -14,6 +14,12 @@ related:
 
 # Engine Registry & Trait API
 
+> **V0 clarification (ADR-012):** the 16-trait registry is the long-term
+> architectural vocabulary. V0 qualifies only the CPU-only COLMAP sparse path
+> and its private workspace contracts; it does not expose selectable engines or
+> raw adapter flags. See
+> [V0 strict sparse reconstruction](./v0-strict-sparse-profile.md).
+
 ## TL;DR
 
 The photogrammetry API surface is exactly **16 stable Rust traits**. Each
