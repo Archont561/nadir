@@ -349,6 +349,12 @@ dependencies = [
 [[package]]
 name = "nadir-artifacts"
 version = "0.1.0"
+dependencies = [
+ "nadir-core",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
 
 [[package]]
 name = "nadir-cartography"

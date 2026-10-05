@@ -18,6 +18,9 @@
     "crates/artifacts": {
       "name": "@nadir/rust-artifacts",
       "version": "0.0.0",
+      "dependencies": {
+        "@nadir/rust-core": "workspace:*",
+      },
     },
     "crates/cartography": {
       "name": "@nadir/rust-cartography",

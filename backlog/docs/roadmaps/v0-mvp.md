@@ -51,7 +51,7 @@ not a calendar promise.
 ### Implementation Milestones
 
 **Foundation: artifacts, runtime and input safety**
-- [ ] ND-1 — separate invocation keys from verified output-tree digests
+- [x] ND-1 — separate invocation keys from verified output-tree digests
 - [ ] ND-2 — run qualified subprocesses with honest failure taxonomy
 - [ ] ND-30 — qualify and enforce the V0 runtime profile
 - [ ] ND-3 — snapshot one bounded calibrated ImageSet
