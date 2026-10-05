@@ -54,6 +54,30 @@ fn declaration_resolves_to_dag_without_losing_declaration_order() {
 }
 
 #[test]
+fn scheduling_queries_are_repeatable_and_keep_declaration_order_on_ties() {
+    let pipeline = build(vec![
+        task("report", "generate_report", &[]),
+        task("ingest", "ingest_images", &[]),
+        task("features", "extract_features", &["ingest"]),
+        task("metadata", "inspect_dataset", &["ingest"]),
+        task("ortho", "orthorectify", &["features", "metadata"]),
+    ])
+    .expect("valid branching declaration builds");
+
+    let expected_order = ["report", "ingest", "features", "metadata", "ortho"];
+    let expected_waves = vec![
+        vec!["report", "ingest"],
+        vec!["features", "metadata"],
+        vec!["ortho"],
+    ];
+
+    assert_eq!(pipeline.execution_order(), expected_order);
+    assert_eq!(pipeline.parallel_waves(), expected_waves);
+    assert_eq!(pipeline.execution_order(), expected_order);
+    assert_eq!(pipeline.parallel_waves(), expected_waves);
+}
+
+#[test]
 fn duplicate_tasks_return_typed_diagnostic_naming_the_task() {
     let error = build(vec![
         task("ingest", "ingest_images", &[]),

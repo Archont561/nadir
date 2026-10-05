@@ -214,12 +214,7 @@ impl Pipeline {
     /// Tasks grouped into deterministic parallel waves.
     pub fn parallel_waves(&self) -> Vec<Vec<&str>> {
         let mut waves = Vec::new();
-        let mut in_degree: Vec<usize> = self.dependencies.iter().map(Vec::len).collect();
-        let mut ready: BTreeSet<usize> = in_degree
-            .iter()
-            .enumerate()
-            .filter_map(|(index, degree)| (*degree == 0).then_some(index))
-            .collect();
+        let (mut in_degree, mut ready) = self.initial_schedule();
 
         while !ready.is_empty() {
             let wave_indices: Vec<_> = ready.iter().copied().collect();
@@ -245,14 +240,24 @@ impl Pipeline {
         waves
     }
 
-    fn topological_order_indices(&self) -> Vec<usize> {
-        let mut order = Vec::with_capacity(self.nodes.len());
-        let mut in_degree: Vec<usize> = self.dependencies.iter().map(Vec::len).collect();
-        let mut ready: BTreeSet<usize> = in_degree
+    /// Return the mutable state shared by deterministic scheduling views.
+    ///
+    /// Both public scheduling methods start from the same indegrees and initial ready set;
+    /// keeping that setup in one place ensures they retain the same declaration-order
+    /// tie-breaker without sharing any mutable state between calls.
+    fn initial_schedule(&self) -> (Vec<usize>, BTreeSet<usize>) {
+        let in_degree: Vec<usize> = self.dependencies.iter().map(Vec::len).collect();
+        let ready = in_degree
             .iter()
             .enumerate()
             .filter_map(|(index, degree)| (*degree == 0).then_some(index))
             .collect();
+        (in_degree, ready)
+    }
+
+    fn topological_order_indices(&self) -> Vec<usize> {
+        let mut order = Vec::with_capacity(self.nodes.len());
+        let (mut in_degree, mut ready) = self.initial_schedule();
 
         while let Some(index) = ready.pop_first() {
             order.push(index);
