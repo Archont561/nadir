@@ -4,14 +4,19 @@ title: 'Add quality gates, GCP georeferencing and resource-aware scheduling'
 status: To Do
 assignee: []
 created_date: '2026-09-30 20:38'
+updated_date: '2026-10-05'
 labels:
   - v1.0
   - geometry
   - executor
-dependencies: []
+dependencies:
+  - ND-6
+  - ND-11
 references:
   - backlog/docs/roadmaps/v1-platform.md
   - .knowledge/architecture/overview.md
+  - .knowledge/architecture/v0-strict-sparse-profile.md
+  - backlog/docs/decisions/012-v0-strict-sparse-reconstruction-profile.md
 priority: medium
 type: feature
 ordinal: 16000

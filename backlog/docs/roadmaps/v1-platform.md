@@ -3,22 +3,31 @@ type: Roadmap
 title: V1 Platform Details
 description: "V1.0 adaptive planning, QC, recipes, resource scheduling"
 purpose: V1.0 adaptive planning, QC, recipes, resource scheduling
-last_updated: 2025-02-23
+last_updated: 2026-10-05
 status: stable
 related:
   - full-roadmap.md
   - v0-mvp.md
   - ../../../.knowledge/architecture/pipeline-dag.md
+  - ../../../.knowledge/architecture/v0-strict-sparse-profile.md
+  - ../decisions/012-v0-strict-sparse-reconstruction-profile.md
 ---
 
 # V1 Platform Details
 
 ## V1.0 — Production Processing Platform
 
-**Goal:** A flexible, adaptive, resource-aware photogrammetry platform that
-handles diverse mission types on a single machine.
+**Goal:** A flexible, adaptive, resource-aware local photogrammetry platform
+that adds georeferencing, dense reconstruction and mapping products only after
+V0 `SparseScene v1` and verified cache contracts are qualified.
 
 **Timeline:** after V0.1 has qualified its sparse/cache boundary; timing is evidence-driven rather than a promise made before the V0 profile is proven.
+
+### Scope Boundary
+
+V1 consumes the strict sparse profile; it does not move georeferencing, dense
+reconstruction or product output back into V0.1. Every new product stage must
+name the artifact contract it consumes and produces.
 
 ### Adaptive Pipeline Planning
 
@@ -39,7 +48,7 @@ handles diverse mission types on a single machine.
 - [ ] `--product terrain`: prune ortho, mesh; add ground classification + DTM
 - [ ] `--product 3d-model`: prune DSM, DTM, ortho; keep mesh + texture
 - [ ] `--product full`: all products
-- [ ] DAG pruning algorithm (walk backwards from targets)
+- [ ] DAG pruning algorithm (walk backwards from targets) built on post-V0 recipe contracts
 
 ### Pipeline Variants
 

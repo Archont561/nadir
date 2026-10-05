@@ -1,33 +1,37 @@
 ---
 id: ND-8
-title: Rasterize a DSM from the dense cloud with IDW
+title: Rasterize post-V0 DSM products from qualified dense artifacts
 status: To Do
 assignee: []
 created_date: '2026-09-30 19:25'
+updated_date: '2026-10-05'
 labels:
-  - v0.1
+  - v1.0
   - surface
-milestone: m-0
+milestone: m-1
 dependencies:
   - ND-6
   - ND-7
 references:
   - .knowledge/architecture/five-domains.md
   - .knowledge/photogrammetry/pipeline-stages.md
+  - backlog/docs/roadmaps/v1-platform.md
+  - backlog/docs/decisions/012-v0-strict-sparse-reconstruction-profile.md
 priority: medium
+type: feature
 ordinal: 8000
 ---
 
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-The first product computed by nadir itself rather than by an external engine: an inverse-distance-weighted surface over the dense point cloud, parallelised with rayon, at a resolution the caller asks for in ground units.
+DSM rasterization is a mapping-product stage deferred until after V0. It consumes qualified georeferenced dense artifacts and produces a validated surface grid with CRS, resolution and nodata semantics suitable for downstream product writers.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 IDW interpolation produces a float32 height grid at a requested GSD, with nodata where the search radius finds no points.
-- [ ] #2 The rasterizer is tiled and parallel, and produces identical output regardless of thread count.
-- [ ] #3 The grid carries its CRS, origin and pixel size, so the writer needs no out-of-band geotransform.
-- [ ] #4 The nodata ratio is reported as a statistic of the stage, because V0.2 gates on it.
+- [ ] #1 IDW interpolation produces a float32 height grid at a requested ground resolution with documented nodata behavior.
+- [ ] #2 The rasterizer is tiled and parallel, and produces identical output regardless of thread count under the qualified profile.
+- [ ] #3 The grid carries CRS, origin, pixel size and nodata metadata so writers need no out-of-band geotransform.
+- [ ] #4 Nodata ratio, coverage and source dense-artifact identity are reported for post-V0 quality gates.
 <!-- AC:END -->

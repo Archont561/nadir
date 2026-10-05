@@ -20,33 +20,36 @@ related:
 
 ## Decision in one sentence
 
-V0 accepts one bounded, calibrated image set and produces one byte-verified,
-local-coordinate `SparseScene v1` through a pinned, CPU-only COLMAP pipeline;
-it does not claim georeferencing, dense reconstruction, or mapping products.
+V0 accepts exactly one bounded, calibrated ImageSet and produces one
+byte-verified, local-coordinate `SparseScene v1` through a qualified CPU-only
+COLMAP pipeline; it does not claim georeferencing, dense reconstruction, GPU
+execution, worker service, or mapping products.
 
 ## V0 product boundary
 
 ```text
-immutable ImageSet snapshot
-  → feature extraction
-  → exhaustive matching
+one immutable ImageSet snapshot
+  → CPU-only feature extraction
+  → CPU-only exhaustive matching
   → sparse reconstruction
-  → canonical SparseScene v1
+  → canonical local SparseScene v1
 ```
 
-The only qualified V0 engine path is COLMAP. Every invocation is a separate
-immutable stage artifact. A completed cache entry contains exactly the bytes
-named by its verified manifest and is never mutated. Identical verified runs
-launch no COLMAP subprocesses on cache hits. User output is a writable copy or
-copy-on-write reflink, never a cache path.
+The only qualified V0 engine path is COLMAP, resolved from a locked Pixi
+developer profile or an official digest-pinned OCI runtime. Every invocation is
+a separate immutable stage artifact. A completed cache entry contains exactly
+the bytes named by its verified manifest and is never mutated. Identical
+verified runs launch no COLMAP subprocesses on cache hits. User output is a
+writable copy or copy-on-write reflink, never a cache path.
 
 ## Input and camera contract
 
-Nadir recursively discovers supported regular JPEG files and explicitly
-calibrated PNG files, sorts normalized logical paths, validates them, and
-snapshots original bytes without symlinks or ordinary hard links. Every run has
-one resolved intrinsics profile. Mixed rigs, incompatible dimensions, missing
-calibration, focus/zoom changes, and untracked orientation transforms fail.
+Nadir accepts one input root, recursively discovers supported regular JPEG
+files and explicitly calibrated PNG files, sorts normalized logical paths,
+validates them against measured V0 bounds, and snapshots original bytes without
+symlinks or ordinary hard links. Every run has one resolved intrinsics profile.
+Mixed rigs, incompatible dimensions, missing calibration, focus/zoom changes,
+and untracked orientation transforms fail.
 
 ## Coordinate and output contract
 
@@ -75,8 +78,9 @@ policy verdict.
 
 V0 accepts exactly one reconstruction model containing every admitted image,
 with finite calibration, poses and geometry, a nonempty sparse cloud, and all
-files passing contract validation. Registration, connectivity, feature, match,
-point, observation, track, and reprojection facts are recorded.
+files passing `SparseScene v1` contract validation. Registration,
+connectivity, feature, match, point, observation, track, and reprojection facts
+are recorded.
 
 ## Runtime profiles and trust
 
@@ -109,6 +113,8 @@ with zero COLMAP launches.
 ## Explicit V0 deferrals
 
 Georeferencing, GPS/RTK/GCP and CRS claims; OpenMVS, PDAL, GDAL, DSM/DTM,
-meshes and orthomosaics; GPU and configurable recipes; multi-camera rigs, RAW,
-TIFF and video; remote/shared workers; and end-user Python/TypeScript workflow
-APIs are deferred until separately qualified.
+meshes, orthomosaics, GeoTIFF/COG outputs and all mapping products; GPU
+execution and configurable/declarative DAG recipes; multi-camera rigs, RAW,
+TIFF and video; HTTP serving, remote/shared workers and worker services; and
+end-user Python/TypeScript workflow APIs are deferred until separately
+qualified.

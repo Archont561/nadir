@@ -1,30 +1,36 @@
 ---
 id: ND-10
-title: Parse TOML pipeline definitions into a petgraph DAG
+title: Add declarative DAG recipes after the fixed V0 profile
 status: To Do
 assignee: []
 created_date: '2026-09-30 19:25'
+updated_date: '2026-10-05'
 labels:
-  - v0.1
+  - v1.0
   - pipeline
-milestone: m-0
-dependencies: []
+milestone: m-1
+dependencies:
+  - ND-11
 references:
   - .knowledge/architecture/pipeline-dag.md
-priority: high
+  - .knowledge/architecture/v0-strict-sparse-profile.md
+  - backlog/docs/roadmaps/v1-platform.md
+  - backlog/docs/decisions/012-v0-strict-sparse-reconstruction-profile.md
+priority: medium
+type: feature
 ordinal: 10000
 ---
 
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-nadir plan currently prints a fixed ordering rather than a resolved graph. Replace that with a real parse: a declarative TOML pipeline whose steps name an engine, its parameters and its inputs, resolved into a petgraph DAG with the errors a human needs when the file is wrong.
+V0 uses one fixed strict sparse profile. Declarative TOML recipes, user-selected pipeline variants and adaptive product DAGs are follow-on work that must preserve the V0 artifact contracts while adding configurable local processing.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A TOML pipeline parses into a typed graph whose nodes are steps and whose edges are artifact dependencies.
-- [ ] #2 A cycle, an unknown step reference, or an unknown engine is a diagnostic naming the offending key, not a panic or a silent drop.
-- [ ] #3 A built-in standard pipeline is embedded, so nadir process with no --pipeline has something to run.
-- [ ] #4 nadir plan prints the resolved DAG, including the parallel branches, instead of a static list.
+- [ ] #1 A TOML recipe parses into typed steps and artifact dependencies without changing the canonical V0 stage contracts.
+- [ ] #2 Cycles, unknown step references, unknown engines and attempts to bypass qualification are diagnostics naming the offending key.
+- [ ] #3 Built-in recipes are explicitly post-V0 profiles; `nadir plan` distinguishes the fixed V0 sparse profile from configurable later recipes.
+- [ ] #4 Product targets can prune later mapping-product branches while preserving required dependencies and cache identity.
 <!-- AC:END -->

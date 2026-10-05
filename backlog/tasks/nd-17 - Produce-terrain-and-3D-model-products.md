@@ -4,14 +4,20 @@ title: Produce terrain and 3D-model products
 status: To Do
 assignee: []
 created_date: '2026-09-30 20:38'
+updated_date: '2026-10-05'
 labels:
   - v1.0
   - surface
   - reconstruction
-dependencies: []
+dependencies:
+  - ND-7
+  - ND-8
+  - ND-9
 references:
   - backlog/docs/roadmaps/v1-platform.md
   - .knowledge/photogrammetry/engine-assignment.md
+  - .knowledge/architecture/v0-strict-sparse-profile.md
+  - backlog/docs/decisions/012-v0-strict-sparse-reconstruction-profile.md
 priority: medium
 type: feature
 ordinal: 17000
@@ -20,7 +26,7 @@ ordinal: 17000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-Expand product coverage beyond the V0 DSM and orthomosaic with DTM, point-cloud export, mesh and texture outputs.
+Introduce mapping-product coverage after the V0 strict sparse profile: terrain products, point-cloud export, mesh and texture outputs that consume explicit sparse, georeferenced and dense artifact contracts.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
