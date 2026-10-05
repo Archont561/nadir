@@ -4,14 +4,18 @@ title: Add adaptive planning and product recipes
 status: To Do
 assignee: []
 created_date: '2026-09-30 20:38'
+updated_date: '2026-10-05'
 labels:
   - v1.0
   - pipeline
   - reconstruction
-dependencies: []
+dependencies:
+  - ND-10
 references:
   - backlog/docs/roadmaps/v1-platform.md
   - .knowledge/photogrammetry/engine-assignment.md
+  - .knowledge/architecture/v0-strict-sparse-profile.md
+  - backlog/docs/decisions/012-v0-strict-sparse-reconstruction-profile.md
 priority: medium
 type: feature
 ordinal: 15000

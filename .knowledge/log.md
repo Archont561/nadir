@@ -1,6 +1,9 @@
 # Nadir Knowledge Bundle Update Log
 
 ## 2026-10-05
+* **Reconciliation**: Completed the ADR-012 roadmap/backlog alignment begun in PR #11. README, architecture overview, COLMAP guide, context, V0 roadmaps, demo plan, milestones and V0 tasks now describe the same strict sparse contract.
+* **Backlog**: Rewrote ND-1 through ND-5, ND-11, ND-12 and ND-14 around one bounded calibrated ImageSet, immutable snapshots, qualified CPU-only COLMAP, verified cache manifests, canonical local `SparseScene v1` and strict one-model acceptance; expanded ND-30 and ND-31.
+* **Deferrals**: Moved georeferencing, OpenMVS, DSM/DTM, GeoTIFF/COG, declarative recipes and HTTP serving out of V0.1 into later roadmap labels/milestones.
 * **Decision**: Added [ADR-012](../backlog/docs/decisions/012-v0-strict-sparse-reconstruction-profile.md) and the [V0 strict sparse reconstruction profile](architecture/v0-strict-sparse-profile.md). V0.1 now proves immutable local sparse SfM with a qualified CPU-only COLMAP profile instead of promising a georeferenced mapping stack.
 * **Scope**: Georeferencing, dense reconstruction, PDAL/GDAL products, GPU execution, multi-camera input, distributed workers, and general reconstruction SDKs are explicit follow-on work rather than implicit V0 obligations.
 * **Safety**: Recorded the accepted invocation/output identity split, immutable input snapshots and workspace artifacts, atomic verified publication, OS-user cache locks, policy-gated product acceptance, trusted/untrusted runtime separation, host-side candidate import, and independent user-output materialization.

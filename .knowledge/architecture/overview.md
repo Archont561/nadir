@@ -3,7 +3,7 @@ type: Architecture
 title: Architecture Overview
 description: "Big-picture system design — 5 domains, 3 dependency tiers, build system metaphor"
 purpose: Big-picture system design — 5 domains, 3 dependency tiers, build system metaphor
-last_updated: 2025-02-23
+last_updated: 2026-10-05
 status: stable
 related:
   - ../context.md
@@ -12,18 +12,19 @@ related:
   - pipeline-dag.md
   - artifact-model.md
   - ../../backlog/docs/decisions/001-step-scoped-vs-odm-monolith.md
+  - ../../backlog/docs/decisions/012-v0-strict-sparse-reconstruction-profile.md
 ---
 
 # Architecture Overview
 
 ## TL;DR
 
-Nadir is an **artifact-driven build system for geospatial computation**. Not a
-job queue, not an ODM wrapper. Tasks produce artifacts from artifacts. Every
-node in the DAG is an artifact, every edge is a task, every artifact has
-provenance and a content hash. The system is organized into 5 computational
-domains, uses 3 dependency tiers, and evolves from a CLI orchestrator around
-external engines (V0) to a mostly Rust-native photogrammetry platform (V3).
+Nadir is an **artifact-driven build system for photogrammetry artifacts**. Not
+a job queue, not an ODM wrapper. Tasks produce artifacts from artifacts; every
+artifact has provenance and verified bytes. ADR-012 narrows V0 to one bounded
+calibrated ImageSet, immutable input snapshots, a qualified CPU-only COLMAP
+sparse path, verified stage caching, and canonical local `SparseScene v1`.
+Georeferencing, dense reconstruction, workers and mapping products come later.
 
 ## The Mental Model
 
@@ -51,13 +52,13 @@ Think:
               │   TASK EXECUTOR  │
               └────────┬─────────┘
                        │
-             ┌─────────┼─────────┐
-             ▼         ▼         ▼
-          COLMAP    OpenMVS     GDAL
-             │         │         │
-             └─────────┼─────────┘
                        ▼
-                    ARTIFACT
+              CPU-only COLMAP (V0)
+                       │
+                       ▼
+              SparseScene v1 (local_sfm)
+                       │
+          post-V0: CRS / dense / products
                        │
               ┌────────┴────────┐
               ▼                 ▼
@@ -67,9 +68,10 @@ Think:
             RESUME
 ```
 
-This gives you caching, incremental invalidation, resume, partial execution,
-reproducibility, alternative engines, and distributed execution as
-**architectural properties**, not bolted-on features.
+This gives you caching, incremental invalidation, resume, reproducibility,
+alternative engines, and eventually distributed execution as **architectural
+properties**, not bolted-on features. V0 proves those properties on the smallest
+useful boundary before adding configurable recipes or product branches.
 
 ## The Five Computational Domains
 
@@ -108,8 +110,10 @@ crate group, trait hierarchy, and engine assignments:
 └────────────────────────────────────────────┘
 ```
 
-Above all five sits the **Workflow Engine**: DAG planner, task executor,
-artifact cache, provenance store, and resource scheduler.
+Above all five sits the **Workflow Engine**: profile/recipe planner, task executor,
+artifact cache, provenance store, and resource scheduler. V0 touches Dataset and
+Reconstruction only; Geometry, Surface and Cartography are post-V0 consumers of
+explicit artifact contracts.
 
 See [five-domains.md](./five-domains.md) for the detailed breakdown.
 
@@ -137,8 +141,9 @@ clap            CLI
 tracing         structured logging
 ```
 
-Plus all orchestration code you write: pipeline, executor, artifacts, cache,
-provenance, config, georeferencing, DSM/DTM, orthomosaic.
+Plus all orchestration code you write: profile/recipe planning, executor,
+artifacts, cache, provenance, config and, after V0, georeferencing, DSM/DTM and
+orthomosaic generation.
 
 ### Tier 2: C/C++ Bindings (stable FFI)
 
@@ -222,7 +227,9 @@ No pipeline changes required. See [engine-registry.md](./engine-registry.md).
 ## The Artifact-First Principle
 
 Artifacts are more important than files. An artifact represents a meaningful
-processing result with identity, provenance, and a content hash.
+processing result with identity, provenance, and verified bytes. V0 distinguishes
+the invocation key that identifies requested work from the output-tree digest
+that verifies produced bytes.
 
 ```rust
 pub struct Artifact {
@@ -239,50 +246,57 @@ Content-based identity enables:
 
 ```
 hash(
-    task type
-    + input artifact hashes
-    + normalized task parameters
-    + engine identity
-    + engine version
+    task and contract versions
+    + named input artifact digests
+    + normalized resolved configuration
+    + qualified toolchain identity
+    + every byte-affecting setting
 )
 ```
 
-Same inputs + same config + same engine = cache hit. See
-[artifact-model.md](./artifact-model.md).
+The key maps to a verified manifest of output-tree digests. Same inputs + same
+config + same qualified runtime = cache lookup; the hit is usable only after the
+manifest bytes revalidate. See [artifact-model.md](./artifact-model.md).
 
 ## The Evolution Path
 
-### V0: Orchestrator (current target)
+### V0: Strict sparse reconstruction (current target)
 
 ```
-Rust CLI/Worker
-    ├── COLMAP (subprocess)
-    ├── OpenMVS (subprocess)
-    ├── GDAL (FFI)
-    ├── PROJ (FFI)
-    └── PDAL (subprocess)
+Rust CLI
+    └── qualified CPU-only COLMAP sparse path
+            ├── feature_extractor
+            ├── exhaustive_matcher
+            └── mapper
+                ↓
+          SparseScene v1 (local_sfm)
 ```
 
-Goal: produce correct mapping products. Time: months.
+Goal: prove immutable ImageSet snapshots, verified stage caching, runtime
+qualification, containment and canonical local sparse output. No CRS, dense
+reconstruction, GPU execution, worker service or mapping products.
 
-### V1: Processing Platform
+### V1: Local mapping products
 
-Add: content-addressed cache, artifact model, provenance, QC gates, adaptive
-planning, product recipes, resource-aware scheduler, dataset preflight.
+Add: georeferencing, CRS transforms, dense reconstruction, DSM/DTM,
+orthomosaics, GeoTIFF/COG output, adaptive recipes and resource-aware local
+scheduling.
 
-Goal: make processing reliable, reproducible, and pleasant.
+Goal: make mapping products reliable by consuming explicit V0 artifact
+contracts.
 
-### V2: Scale & Native Engines
+### V2: Worker service and scale
 
-Add: dataset splitting, native Rust surface engines (DSM/DTM/filtering),
-worker protocol (protobuf), multi-language SDK, distributed execution.
+Add: worker protocol, HTTP serving, object-store policies, dataset splitting,
+partition/merge execution, remote transports and workflow SDKs.
 
-Goal: handle 10,000+ images, begin replacing external engines.
+Goal: handle large datasets and remote execution without changing local
+artifact semantics.
 
-### V3: Full Platform
+### V3: Native/WASM/edge platform
 
-Add: native Rust reconstruction (features, matching, SfM), GPU compute
-(wgpu), browser WASM, edge processing, SaaS control plane.
+Add: selected native Rust engines, GPU qualification profiles, browser WASM,
+edge processing and optional SaaS control plane.
 
 Goal: become something more interesting than an ODM reimplementation.
 
@@ -290,17 +304,19 @@ Goal: become something more interesting than an ODM reimplementation.
 
 ```
 V0                          V1                    V2                    V3
-Features   → COLMAP         → COLMAP              → Rust                → Rust/GPU
-Matching   → COLMAP         → COLMAP              → Rust                → Rust/GPU
-SfM        → COLMAP         → COLMAP              → COLMAP              → Rust
-Dense MVS  → OpenMVS        → OpenMVS             → OpenMVS             → Rust/GPU
-PC Filter  → PDAL           → PDAL                → Rust                → Rust
-Ground     → PDAL           → PDAL                → Rust                → Rust/ML
-DSM        → Rust+GDAL      → Rust                → Rust                → Rust
-DTM        → Rust+GDAL      → Rust                → Rust                → Rust
-Mesh       → OpenMVS        → OpenMVS             → OpenMVS             → Rust
-Ortho      → Rust+GDAL      → Rust                → Rust                → Rust
-CRS        → PROJ           → PROJ                → PROJ                → PROJ (permanent)
+Features   → COLMAP CPU     → COLMAP              → Rust candidate      → Rust/GPU
+Matching   → COLMAP CPU     → COLMAP              → Rust candidate      → Rust/GPU
+SfM        → COLMAP CPU     → COLMAP              → COLMAP/Rust         → Rust
+Sparse out → SparseScene v1 → SparseScene v1      → SparseScene v1      → SparseScene v1
+Georef     → deferred       → PROJ + Rust         → PROJ + Rust         → PROJ (permanent)
+Dense MVS  → deferred       → OpenMVS/COLMAP      → OpenMVS/Rust        → Rust/GPU
+PC Filter  → deferred       → PDAL                → Rust candidate      → Rust
+Ground     → deferred       → PDAL                → Rust candidate      → Rust/ML
+DSM        → deferred       → Rust+GDAL           → Rust                → Rust
+DTM        → deferred       → Rust+GDAL           → Rust                → Rust
+Mesh       → deferred       → OpenMVS             → OpenMVS/Rust        → Rust
+Ortho      → deferred       → Rust+GDAL           → Rust                → Rust
+Workers    → none           → local only          → Worker Protocol     → distributed
 ```
 
 PROJ is the one dependency you never rewrite. Coordinate reference systems
@@ -322,4 +338,4 @@ without ever redesigning the core architecture.
 - [Pipeline & DAG](./pipeline-dag.md) — how the DAG executor works
 - [Artifact model](./artifact-model.md) — hashing, caching, provenance
 - [Worker protocol](./worker-protocol.md) — distributed execution
-- [Full roadmap](../../backlog/docs/roadmaps/full-roadmap.md) — V0→V3 checklist
+- [Full roadmap](../../backlog/docs/roadmaps/full-roadmap.md) — ADR-012-aligned V0→V3 checklist

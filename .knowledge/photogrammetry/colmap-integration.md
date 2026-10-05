@@ -1,557 +1,195 @@
 ---
 type: Domain Guide
 title: COLMAP Integration
-description: "CLI commands, binary format, adapter code, progress parsing, resume behavior"
-purpose: CLI commands, binary format, adapter code, progress parsing, resume behavior
-last_updated: 2025-02-23
+description: "ADR-012-qualified CPU-only COLMAP sparse path and post-V0 command map"
+purpose: Defines the only accepted V0 COLMAP path, parse rules, cache boundaries and later COLMAP capabilities.
+last_updated: 2026-10-05
 status: stable
 related:
   - engine-assignment.md
   - openmvs-integration.md
   - ../architecture/engine-registry.md
-  - ../architecture/engine-registry.md
+  - ../architecture/v0-strict-sparse-profile.md
+  - ../../backlog/docs/decisions/012-v0-strict-sparse-reconstruction-profile.md
 ---
 
 # COLMAP Integration
 
 ## TL;DR
 
-COLMAP is the primary engine for feature extraction, matching, and Structure
-from Motion. Nadir invokes COLMAP as a subprocess via `tokio::process`,
-parses its binary output format (`cameras.bin`, `images.bin`, `points3D.bin`),
-and converts results into Nadir artifact types. COLMAP's CLI is essentially
-a task API — each command maps to a Nadir trait method.
+ADR-012 qualifies exactly one V0 COLMAP path: CPU-only feature extraction,
+CPU-only exhaustive matching and sparse reconstruction (`mapper`) from an
+immutable calibrated ImageSet snapshot to a canonical local-coordinate
+`SparseScene v1`. V0 does not expose raw COLMAP flags, alternate matchers,
+model alignment, dense reconstruction, GPU execution or mapping products.
 
-## COLMAP CLI Command Map
+COLMAP workspaces and SQLite databases are engine-private stage artifacts. The
+public exchange boundary is `SparseScene v1` only.
 
-| Nadir Task | COLMAP Command | Input | Output |
-|---|---|---|---|
-| `CreateDatabase` | `database_creator` | workspace | `database.db` |
-| `ExtractFeatures` | `feature_extractor` | images + DB | features in DB |
-| `MatchExhaustive` | `exhaustive_matcher` | DB | matches in DB |
-| `MatchSequential` | `sequential_matcher` | DB | matches in DB |
-| `MatchSpatial` | `spatial_matcher` | DB + GPS | matches in DB |
-| `MatchVocabTree` | `vocab_tree_matcher` | DB + vocab | matches in DB |
-| `VerifyMatches` | `geometric_verifier` | DB | verified matches |
-| `SparseReconstruction` | `mapper` | DB + images | sparse model dir |
-| `HierarchicalSfM` | `hierarchical_mapper` | DB + images | sparse models |
-| `GlobalSfM` | `global_mapper` | DB | sparse model |
-| `PosePriorSfM` | `pose_prior_mapper` | DB + priors | sparse model |
-| `Triangulate` | `point_triangulator` | model + DB | sparse points |
-| `BundleAdjust` | `bundle_adjuster` | model | optimized model |
-| `Georeference` | `model_aligner` | model + GPS | aligned model |
-| `Undistort` | `image_undistorter` | model + images | dense workspace |
-| `DenseMVS` | `patch_match_stereo` | dense workspace | depth maps |
-| `FuseDepthMaps` | `stereo_fusion` | depth maps | dense PLY |
-| `PoissonMesh` | `poisson_mesher` | dense PLY | mesh |
-| `DelaunayMesh` | `delaunay_mesher` | dense workspace | mesh |
-| `TextureMesh` | `mesh_texturer` | mesh + images | textured mesh |
-| `ConvertModel` | `model_converter` | COLMAP model | PLY/other |
-| `AnalyzeModel` | `model_analyzer` | model | statistics |
+## V0 Qualified Path
 
-## The Standard COLMAP Pipeline
+```text
+ImageSet snapshot
+  → colmap feature_extractor   (CPU SIFT, fixed adapter-owned flags)
+  → colmap exhaustive_matcher  (CPU matching, fixed adapter-owned flags)
+  → colmap mapper              (sparse reconstruction)
+  → SparseScene v1             (manifest.json, cameras.json, points.ply)
+```
 
-The explicit pipeline (as opposed to `automatic_reconstructor`):
+Required properties:
+
+- COLMAP is resolved only from a qualified locked Pixi developer profile or an
+  official OCI image by digest; ambient system COLMAP is unqualified.
+- GPU use is explicitly disabled for extraction and matching.
+- Runtime identity records package/runtime digest, executable digest/version,
+  architecture, thread count, locale, timezone, arguments and GPU-disabled
+  state.
+- Each COLMAP invocation has its own invocation key and verified output-tree
+  manifest. Invocation keys are not output digests.
+- Cache hits revalidate referenced bytes and launch no COLMAP subprocesses.
+- User output is a copy or copy-on-write reflink of `SparseScene v1`, never an
+  engine workspace or cache path.
+
+## V0 Command Skeleton
+
+The adapter owns the exact flag set; callers select no raw COLMAP flags in V0.
+The skeleton below documents the stage shape, not a user-facing CLI surface.
 
 ```bash
-# 1. Feature extraction
+# Feature extraction: CPU only, one calibrated camera profile.
 colmap feature_extractor \
-    --database_path database.db \
-    --image_path images/ \
-    --ImageReader.camera_model OPENCV \
-    --SiftExtraction.max_num_features 8192 \
-    --SiftExtraction.use_gpu false
+  --database_path "$STAGING/database.db" \
+  --image_path "$STAGING/images" \
+  --ImageReader.single_camera 1 \
+  --ImageReader.camera_model OPENCV \
+  --SiftExtraction.use_gpu false
 
-# 2. Feature matching
+# Exhaustive matching: CPU only.
 colmap exhaustive_matcher \
-    --database_path database.db \
-    --SiftMatching.use_gpu false
+  --database_path "$STAGING/database.db" \
+  --SiftMatching.use_gpu false
 
-# 3. Sparse reconstruction
+# Sparse reconstruction.
 colmap mapper \
-    --database_path database.db \
-    --image_path images/ \
-    --output_path sparse/ \
-    --Mapper.ba_max_num_iterations 100
-
-# 4. (Optional) Model alignment with GPS
-colmap model_aligner \
-    --input_path sparse/0 \
-    --output_path sparse/aligned \
-    --ref_images_path gps.txt \
-    --robust_alignment true
-
-# 5. Undistort for dense reconstruction
-colmap image_undistorter \
-    --image_path images/ \
-    --input_path sparse/0 \
-    --output_path dense/ \
-    --output_type COLMAP
-
-# 6. Dense MVS
-colmap patch_match_stereo \
-    --workspace_path dense/ \
-    --workspace_format COLMAP \
-    --PatchMatchStereo.max_image_size 2000
-
-# 7. Depth map fusion
-colmap stereo_fusion \
-    --workspace_path dense/ \
-    --workspace_format COLMAP \
-    --output_path dense/fused.ply
+  --database_path "$STAGING/database.db" \
+  --image_path "$STAGING/images" \
+  --output_path "$STAGING/sparse"
 ```
 
-## The Rust Adapter
+Byte-affecting values, including defaults that COLMAP would otherwise infer,
+become part of the invocation key. The actual implementation should pin every
+accepted setting in one adapter-owned profile document/test fixture.
 
-### Engine struct
+## V0 Acceptance Rules
 
-```rust
-// crates/nadir-reconstruction/src/colmap/mod.rs
+Nadir accepts a COLMAP run only when all of these are true:
 
-use std::path::{Path, PathBuf};
-use nadir_process::{ProcessRunner, ProcessSpec, ProgressParser};
-use tokio_util::sync::CancellationToken;
+1. The mapper produced exactly one model directory.
+2. That model contains every admitted image from the ImageSet snapshot.
+3. Camera intrinsics, poses and sparse point coordinates are finite.
+4. The sparse point cloud is nonempty.
+5. Observations, track references and image/camera IDs are internally
+   consistent.
+6. All expected files pass the `SparseScene v1` structural validator.
 
-pub struct ColmapEngine {
-    binary: PathBuf,
-    version: String,
-}
+Registration count, connectedness, feature counts, match counts, point counts,
+track lengths and reprojection facts are recorded. A versioned quality-policy
+verdict may reject or warn on those facts, but it is separate from structural
+validity.
 
-impl ColmapEngine {
-    pub fn find() -> anyhow::Result<Self> {
-        let binary = which::which("colmap")
-            .or_else(|_| {
-                // Check common Pixi/conda paths
-                let pixi_path = std::env::var("CONDA_PREFIX")
-                    .map(|p| PathBuf::from(p).join("bin/colmap"))
-                    .ok();
-                pixi_path.filter(|p| p.exists())
-                    .ok_or_else(|| anyhow::anyhow!("COLMAP not found in PATH"))
-            })?;
+## SparseScene v1 Conversion
 
-        let version = Self::detect_version(&binary)?;
-        Ok(Self { binary, version })
-    }
+COLMAP writes a local sparse model as `cameras.bin`, `images.bin` and
+`points3D.bin`. V0 converts those engine-private bytes into a canonical output
+tree:
 
-    fn detect_version(binary: &Path) -> anyhow::Result<String> {
-        let output = std::process::Command::new(binary)
-            .arg("help")
-            .output()?;
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        // Parse "COLMAP 3.9.1" from help output
-        let version = stdout.lines()
-            .find(|l| l.contains("COLMAP"))
-            .and_then(|l| l.split_whitespace().nth(1))
-            .unwrap_or("unknown")
-            .to_string();
-        Ok(version)
-    }
-}
+```text
+sparse_scene_v1/
+  manifest.json
+  cameras.json
+  points.ply
 ```
 
-### Feature extraction implementation
+Canonicalization rules:
 
-```rust
-impl FeatureExtractor for ColmapEngine {
-    fn extract(
-        &self,
-        images: &ImageSet,
-        cfg: &FeatureConfig,
-        ctx: &TaskContext,
-    ) -> Result<Features> {
-        let workspace = ctx.workspace();
-        let db_path = workspace.join("database.db");
-        let image_path = images.base_dir();
+- The coordinate declaration is `local_sfm`; there is no CRS, scale, EPSG code,
+  GPS transform or georeferencing claim.
+- Cameras/images/points are ordered deterministically by normalized logical
+  image path and stable numeric IDs.
+- JSON is emitted in canonical field order with normalized floating-point
+  validation rules.
+- `points.ply` is binary little-endian with deterministic point ordering.
+- Quaternion signs are canonicalized.
 
-        let mut args = vec![
-            "feature_extractor".into(),
-            "--database_path".into(), db_path.to_string_lossy().into(),
-            "--image_path".into(), image_path.to_string_lossy().into(),
-            "--ImageReader.camera_model".into(), "OPENCV".into(),
-            "--SiftExtraction.max_num_features".into(),
-                cfg.max_features.to_string(),
-        ];
+### Pose Semantics
 
-        match cfg.detector {
-            Detector::Sift => {
-                args.push("--SiftExtraction.use_gpu".into());
-                args.push("true".into());
-            }
-            Detector::Orb => {
-                // COLMAP doesn't natively support ORB via CLI
-                // Would need OpenCV adapter for this
-                anyhow::bail!("ORB not supported by COLMAP, use opencv engine");
-            }
-            _ => {}
-        }
+COLMAP stores world-to-camera pose:
 
-        let spec = ProcessSpec {
-            program: self.binary.clone(),
-            args,
-            current_dir: workspace.clone(),
-            timeout: None,
-        };
-
-        let cancel = ctx.cancellation_token();
-        let events = ctx.event_bus();
-
-        // Run with progress parsing
-        tokio::runtime::Handle::current().block_on(async {
-            ProcessRunner::run(
-                spec,
-                Some(ColmapProgressParser),
-                cancel,
-                |pct| events.emit_progress("features", pct),
-            ).await
-        })?;
-
-        // Features are stored in the SQLite database
-        Ok(Features::from_database(&db_path))
-    }
-}
+```text
+x_camera = R × x_world + t
 ```
 
-### SfM implementation
+`SparseScene v1` stores camera-to-world orientation and camera centre:
 
-```rust
-impl SparseReconstructor for ColmapEngine {
-    fn reconstruct(
-        &self,
-        matches: &Matches,
-        cfg: &SfMConfig,
-        ctx: &TaskContext,
-    ) -> Result<SfmOutput> {
-        let workspace = ctx.workspace();
-        let db_path = workspace.join("database.db");
-        let image_path = ctx.input_path("ingest");
-        let sparse_path = workspace.join("sparse");
-        std::fs::create_dir_all(&sparse_path)?;
-
-        let spec = ProcessSpec {
-            program: self.binary.clone(),
-            args: vec![
-                "mapper".into(),
-                "--database_path".into(), db_path.to_string_lossy().into(),
-                "--image_path".into(), image_path.to_string_lossy().into(),
-                "--output_path".into(), sparse_path.to_string_lossy().into(),
-                "--Mapper.ba_max_num_iterations".into(),
-                    cfg.max_iterations.to_string(),
-                "--Mapper.filter_min_tri_angle".into(), "1.5".into(),
-                "--Mapper.ba_global_max_refinements".into(), "5".into(),
-                "--Mapper.ba_global_max_num_iterations".into(), "50".into(),
-                "--Mapper.init_min_tri_angle".into(), "4".into(),
-            ],
-            current_dir: workspace.clone(),
-            timeout: None,
-        };
-
-        ProcessRunner::run(
-            spec,
-            Some(ColmapProgressParser),
-            ctx.cancellation_token(),
-            |pct| ctx.emit_progress("sfm", pct),
-        ).await?;
-
-        // Parse the best reconstruction (subdirectory "0")
-        let model_dir = sparse_path.join("0");
-        if !model_dir.exists() {
-            anyhow::bail!("COLMAP mapper produced no reconstruction");
-        }
-
-        let (cameras, poses, sparse) = parse_colmap_model(&model_dir)?;
-
-        Ok(SfmOutput {
-            camera_models: ctx.register(cameras, ArtifactKind::CameraModel)?,
-            camera_poses: ctx.register(poses, ArtifactKind::CameraPoses)?,
-            sparse_cloud: ctx.register(sparse, ArtifactKind::SparsePointCloud)?,
-        })
-    }
-}
+```text
+orientation_camera_to_world = Rᵀ
+camera_center_world = -Rᵀ × t
 ```
 
-## COLMAP Binary Format Parser
+Do not treat COLMAP's `t` as the camera position.
 
-COLMAP outputs binary files in its sparse model directory. Nadir must parse
-these to convert into Nadir artifact types.
+## Binary Parser Notes
 
-### cameras.bin
+### `cameras.bin`
 
-```
-Format:
-  num_cameras: uint64
-  For each camera:
-    camera_id: uint32
-    model_id: int32       (0=SIMPLE_PINHOLE, 1=PINHOLE, 2=SIMPLE_RADIAL,
-                           3=RADIAL, 4=OPENCV, 5=OPENCV_FISHEYE, 6=FULL_OPENCV)
-    width: uint64
-    height: uint64
-    params: double[]      (length depends on model)
-```
+Contains camera records with model ID, dimensions and parameter arrays. V0
+supports only the camera models admitted by the calibrated ImageSet contract.
+Unknown, truncated or parameter-count-mismatched records are typed validation
+errors naming `cameras.bin`.
 
-```rust
-fn parse_cameras_bin(path: &Path) -> Result<Vec<CameraModel>> {
-    let data = std::fs::read(path)?;
-    let mut cursor = std::io::Cursor::new(&data);
+### `images.bin`
 
-    let num_cameras = cursor.read_u64::<LittleEndian>()?;
-    let mut cameras = Vec::with_capacity(num_cameras as usize);
+Contains image IDs, world-to-camera quaternions/translations, camera IDs,
+image names and 2D observations. V0 validates that every admitted logical path
+appears exactly once and that every registered image references the resolved
+single camera profile.
 
-    for _ in 0..num_cameras {
-        let camera_id = cursor.read_u32::<LittleEndian>()?;
-        let model_id = cursor.read_i32::<LittleEndian>()?;
-        let width = cursor.read_u64::<LittleEndian>()? as u32;
-        let height = cursor.read_u64::<LittleEndian>()? as u32;
+### `points3D.bin`
 
-        let num_params = num_params_for_model(model_id);
-        let mut params = Vec::with_capacity(num_params);
-        for _ in 0..num_params {
-            params.push(cursor.read_f64::<LittleEndian>()?);
-        }
+Contains sparse point coordinates, RGB, reprojection error and track elements.
+V0 validates finite coordinates/errors and that every track observation points
+to an existing admitted image and 2D observation index.
 
-        cameras.push(CameraModel {
-            id: camera_id.into(),
-            width,
-            height,
-            focal_length: params[0],
-            principal_point: Point2::new(
-                params.get(1).copied().unwrap_or(width as f64 / 2.0),
-                params.get(2).copied().unwrap_or(height as f64 / 2.0),
-            ),
-            distortion: extract_distortion(model_id, &params),
-        });
-    }
+## Stage-Level Caching
 
-    Ok(cameras)
-}
+COLMAP's own resumability is not the V0 cache contract. Nadir stages write to
+unique staging directories and only promote structurally valid manifests.
+Promoted engine workspaces are immutable and compatible only with the adapter
+and toolchain profile that produced them.
 
-fn num_params_for_model(model_id: i32) -> usize {
-    match model_id {
-        0 => 3,  // SIMPLE_PINHOLE: f, cx, cy
-        1 => 4,  // PINHOLE: fx, fy, cx, cy
-        2 => 4,  // SIMPLE_RADIAL: f, cx, cy, k
-        3 => 5,  // RADIAL: f, cx, cy, k1, k2
-        4 => 8,  // OPENCV: fx, fy, cx, cy, k1, k2, p1, p2
-        5 => 8,  // OPENCV_FISHEYE: fx, fy, cx, cy, k1, k2, k3, k4
-        6 => 12, // FULL_OPENCV: fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, k5, k6
-        _ => panic!("unknown camera model: {model_id}"),
-    }
-}
-```
+A same-store rerun with equal inputs and config must skip feature extraction,
+matching and mapping by verified cache hit. Qualification evidence must prove
+zero COLMAP launches on that rerun.
 
-### images.bin
+## Post-V0 COLMAP Capabilities
 
-```
-Format:
-  num_images: uint64
-  For each image:
-    image_id: uint32
-    qw, qx, qy, qz: double   (rotation quaternion, wxyz)
-    tx, ty, tz: double        (translation)
-    camera_id: uint32
-    name: string (null-terminated)
-    num_points2D: uint64
-    For each point2D:
-      x, y: double
-      point3D_id: int64       (-1 if not triangulated)
-```
+COLMAP supports many commands that Nadir may use after the strict sparse base is
+qualified. These are not V0.1 requirements.
 
-```rust
-fn parse_images_bin(path: &Path) -> Result<Vec<CameraPose>> {
-    let data = std::fs::read(path)?;
-    let mut cursor = std::io::Cursor::new(&data);
-
-    let num_images = cursor.read_u64::<LittleEndian>()?;
-    let mut poses = Vec::with_capacity(num_images as usize);
-
-    for _ in 0..num_images {
-        let image_id = cursor.read_u32::<LittleEndian>()?;
-        let qw = cursor.read_f64::<LittleEndian>()?;
-        let qx = cursor.read_f64::<LittleEndian>()?;
-        let qy = cursor.read_f64::<LittleEndian>()?;
-        let qz = cursor.read_f64::<LittleEndian>()?;
-        let tx = cursor.read_f64::<LittleEndian>()?;
-        let ty = cursor.read_f64::<LittleEndian>()?;
-        let tz = cursor.read_f64::<LittleEndian>()?;
-        let camera_id = cursor.read_u32::<LittleEndian>()?;
-
-        // Read null-terminated image name
-        let mut name_bytes = Vec::new();
-        loop {
-            let b = cursor.read_u8()?;
-            if b == 0 { break; }
-            name_bytes.push(b);
-        }
-        let _name = String::from_utf8(name_bytes)?;
-
-        // Read 2D points (skip for pose extraction)
-        let num_points2d = cursor.read_u64::<LittleEndian>()?;
-        for _ in 0..num_points2d {
-            let _x = cursor.read_f64::<LittleEndian>()?;
-            let _y = cursor.read_f64::<LittleEndian>()?;
-            let _point3d_id = cursor.read_i64::<LittleEndian>()?;
-        }
-
-        poses.push(CameraPose {
-            image_id: image_id.into(),
-            camera_id: camera_id.into(),
-            position: Point3::new(tx, ty, tz),
-            rotation: UnitQuaternion::from_quaternion(
-                Quaternion::new(qw, qx, qy, qz)
-            ),
-        });
-    }
-
-    Ok(poses)
-}
-```
-
-### points3D.bin
-
-```
-Format:
-  num_points: uint64
-  For each point:
-    point3D_id: uint64
-    x, y, z: double
-    r, g, b: uint8
-    error: double
-    track_length: uint64
-    For each track element:
-      image_id: uint32
-      point2D_idx: uint32
-```
-
-```rust
-fn parse_points3d_bin(path: &Path) -> Result<SparsePointCloud> {
-    let data = std::fs::read(path)?;
-    let mut cursor = std::io::Cursor::new(&data);
-
-    let num_points = cursor.read_u64::<LittleEndian>()?;
-    let mut points = Vec::with_capacity(num_points as usize);
-
-    for _ in 0..num_points {
-        let _point3d_id = cursor.read_u64::<LittleEndian>()?;
-        let x = cursor.read_f64::<LittleEndian>()?;
-        let y = cursor.read_f64::<LittleEndian>()?;
-        let z = cursor.read_f64::<LittleEndian>()?;
-        let r = cursor.read_u8()?;
-        let g = cursor.read_u8()?;
-        let b = cursor.read_u8()?;
-        let error = cursor.read_f64::<LittleEndian>()?;
-
-        let track_length = cursor.read_u64::<LittleEndian>()?;
-        let mut observations = Vec::with_capacity(track_length as usize);
-        for _ in 0..track_length {
-            let image_id = cursor.read_u32::<LittleEndian>()?;
-            let point2d_idx = cursor.read_u32::<LittleEndian>()?;
-            observations.push(Observation {
-                image_id: image_id.into(),
-                point2d_idx,
-            });
-        }
-
-        points.push(SparsePoint {
-            position: Point3::new(x, y, z),
-            color: Color::rgb(r, g, b),
-            error,
-            observations,
-        });
-    }
-
-    Ok(SparsePointCloud { points })
-}
-```
-
-## Progress Parsing
-
-COLMAP emits progress to stdout in recognizable patterns:
-
-```rust
-struct ColmapProgressParser;
-
-impl ProgressParser for ColmapProgressParser {
-    fn parse_line(&self, line: &str) -> Option<f32> {
-        // Feature extraction: "Processed file [123/1284]"
-        if let Some(caps) = regex::Regex::new(r"Processed file \[(\d+)/(\d+)\]")
-            .ok()?.captures(line)
-        {
-            let current: f32 = caps[1].parse().ok()?;
-            let total: f32 = caps[2].parse().ok()?;
-            return Some(current / total);
-        }
-
-        // Matching: "Matching image [456/1284]"
-        if let Some(caps) = regex::Regex::new(r"Matching image \[(\d+)/(\d+)\]")
-            .ok()?.captures(line)
-        {
-            let current: f32 = caps[1].parse().ok()?;
-            let total: f32 = caps[2].parse().ok()?;
-            return Some(current / total);
-        }
-
-        // SfM: "Registering image #12 (45)"
-        if line.contains("Registering image") {
-            // Coarse progress — would need total image count for precise %
-            return Some(0.5); // placeholder
-        }
-
-        None
-    }
-}
-```
-
-## Resume Behavior
-
-COLMAP supports resuming several operations:
-
-| Command | Resume support | How |
+| Capability | COLMAP command | Roadmap |
 |---|---|---|
-| `feature_extractor` | ✅ | Skips images already in database |
-| `exhaustive_matcher` | ✅ | Skips pairs already matched |
-| `mapper` | ✅ | Continues from existing reconstruction |
-| `patch_match_stereo` | ✅ | Skips images with existing depth maps |
-| `stereo_fusion` | ⚠️ | Reruns from scratch |
-
-Nadir's artifact cache handles resume at the task level. COLMAP's native
-resume handles it within a task. The two layers complement each other:
-
-```
-Nadir cache: "SfM task already completed → skip entirely"
-COLMAP resume: "SfM task crashed at image 800/1284 → continue from 800"
-```
-
-## COLMAP Database (SQLite)
-
-The `database.db` file is a SQLite database containing:
-
-| Table | Content |
-|---|---|
-| `cameras` | Camera models and intrinsics |
-| `images` | Image metadata and poses |
-| `keypoints` | Feature keypoints per image |
-| `descriptors` | Feature descriptors per image |
-| `matches` | Pairwise feature matches |
-| `two_view_geometries` | Verified geometric matches |
-
-Nadir can query this database directly for advanced operations:
-
-```rust
-use rusqlite::Connection;
-
-fn get_match_count(db_path: &Path) -> Result<usize> {
-    let conn = Connection::open(db_path)?;
-    let count: usize = conn.query_row(
-        "SELECT COUNT(*) FROM matches WHERE rows > 0",
-        [],
-        |row| row.get(0),
-    )?;
-    Ok(count)
-}
-```
+| Spatial or sequential matching | `spatial_matcher`, `sequential_matcher` | V1 adaptive planning |
+| Vocabulary-tree matching | `vocab_tree_matcher` | V1/V2 larger datasets |
+| Pose-prior or hierarchical SfM | `pose_prior_mapper`, `hierarchical_mapper` | V1 adaptive planning |
+| Model alignment/georeferencing | `model_aligner` | V1 georeferencing |
+| Image undistortion and dense MVS | `image_undistorter`, `patch_match_stereo`, `stereo_fusion` | V1 dense alternatives |
+| Mesh/texturing helpers | `poisson_mesher`, `delaunay_mesher`, `mesh_texturer` | V1 products |
+| Model merge/partition support | `model_merger`, related tools | V2 scale |
 
 ## See Also
 
-- [OpenMVS integration](./openmvs-integration.md) — the next stage after COLMAP
-- [Engine assignment](./engine-assignment.md) — why COLMAP for SfM
-- [Process runner](../architecture/engine-registry.md) — subprocess management
+- [V0 strict sparse reconstruction profile](../architecture/v0-strict-sparse-profile.md)
+- [Engine assignment](./engine-assignment.md) — why COLMAP owns sparse SfM
+- [OpenMVS integration](./openmvs-integration.md) — post-V0 dense reconstruction
 - [Engine registry](../architecture/engine-registry.md) — trait implementation
+- [ADR-012](../../backlog/docs/decisions/012-v0-strict-sparse-reconstruction-profile.md)

@@ -1,32 +1,35 @@
 ---
 id: ND-9
-title: Write cloud-optimized GeoTIFFs for the DSM and the orthomosaic
+title: Write post-V0 GeoTIFF mapping products
 status: To Do
 assignee: []
 created_date: '2026-09-30 19:25'
+updated_date: '2026-10-05'
 labels:
-  - v0.1
+  - v1.0
   - cartography
-milestone: m-0
+milestone: m-1
 dependencies:
   - ND-8
 references:
   - .knowledge/photogrammetry/geospatial-stack.md
-  - backlog/docs/roadmaps/v0-mvp.md
+  - backlog/docs/roadmaps/v1-platform.md
+  - backlog/docs/decisions/012-v0-strict-sparse-reconstruction-profile.md
 priority: medium
+type: feature
 ordinal: 9000
 ---
 
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-The cartography domain: take the height grid and the orthorectified colour mosaic and write them as tiled, overviewed, compressed COGs through the gdal crate, so the outputs open in QGIS and stream from object storage without a conversion step.
+GeoTIFFs, COGs, DSMs and orthomosaics are no longer V0. This post-V0 cartography task writes qualified mapping products from georeferenced surface and imagery artifacts after those upstream contracts exist.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Both products are written as tiled GeoTIFFs with internal overviews and a compression the format validates as cloud-optimized.
-- [ ] #2 The CRS, geotransform and nodata value written to the file match the grid metadata exactly.
-- [ ] #3 A gdal driver or CRS failure is a typed error naming the product, not a partially written file left on disk.
-- [ ] #4 Output paths follow the layout in the V0.1 CLI example: outputs/orthomosaic.cog.tif and outputs/dsm.cog.tif.
+- [ ] #1 Mapping products are written as tiled GeoTIFF/COG files with internal overviews and compression validated by GDAL tooling.
+- [ ] #2 CRS, geotransform, nodata and resolution in each file match the source artifact metadata exactly.
+- [ ] #3 GDAL driver, CRS or write failures are typed errors naming the product and leave no partially promoted output.
+- [ ] #4 Product paths and naming are documented in the post-V0 roadmap, not in the V0 strict sparse profile.
 <!-- AC:END -->

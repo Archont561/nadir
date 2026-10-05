@@ -3,7 +3,7 @@ type: Architecture
 title: Worker Protocol
 description: "Worker API, protobuf schema, transport independence, distributed execution"
 purpose: Worker API, protobuf schema, transport independence, distributed execution
-last_updated: 2025-02-23
+last_updated: 2026-10-05
 status: stable
 related:
   - overview.md
@@ -213,14 +213,14 @@ The protocol is transport-agnostic. Implementations:
 ```
 Worker API
    │
-   ├── Local IPC      (embedded in-process, V0.1)
-   ├── HTTP/REST      (simple JSON, V0.1 demo)
+   ├── Local IPC      (post-V0 embedded execution API)
+   ├── HTTP/REST      (post-V0 worker service)
    ├── gRPC/Connect   (protobuf, V2.0)
    ├── WebSocket      (event streaming, V2.0)
    └── Event Broker   (NATS JetStream, V3.0)
 ```
 
-### Local transport (V0.1)
+### Local transport (post-V0)
 
 ```rust
 pub struct LocalWorker {
@@ -240,7 +240,7 @@ impl Worker for LocalWorker {
 }
 ```
 
-### HTTP transport (V0.1 demo)
+### HTTP transport (post-V0 / V2)
 
 ```rust
 // Server side (Axum)

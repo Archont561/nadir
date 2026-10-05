@@ -1,33 +1,38 @@
 ---
 id: ND-6
-title: Georeference the sparse model with a Umeyama transform and PROJ
+title: Add post-V0 local-to-CRS georeferencing from SparseScene v1
 status: To Do
 assignee: []
 created_date: '2026-09-30 19:25'
+updated_date: '2026-10-05'
 labels:
-  - v0.1
+  - v1.0
   - geometry
   - math
-milestone: m-0
+milestone: m-1
 dependencies:
   - ND-5
 references:
   - .knowledge/photogrammetry/geospatial-stack.md
+  - .knowledge/architecture/v0-strict-sparse-profile.md
   - .knowledge/architecture/five-domains.md
-priority: high
+  - backlog/docs/decisions/012-v0-strict-sparse-reconstruction-profile.md
+  - backlog/docs/roadmaps/v1-platform.md
+priority: medium
+type: feature
 ordinal: 6000
 ---
 
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-COLMAP reconstructs in an arbitrary local frame. Fit the similarity transform from that frame to the GPS positions of the ingested images with Umeyama (nalgebra), then convert to a projected CRS with PROJ so every later product carries real coordinates.
+Georeferencing is explicitly outside V0. This follow-on task consumes an accepted local-coordinate `SparseScene v1`, fits a similarity transform against GPS/RTK/GCP evidence, and publishes a separate georeferenced scene artifact with an explicit CRS, scale and accuracy statement.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The Umeyama fit returns rotation, translation and scale, plus per-image residuals and an overall RMSE.
-- [ ] #2 Images whose GPS residual is a gross outlier are reported, and the fit can exclude them.
-- [ ] #3 The target CRS is derived from the dataset centroid UTM zone by default and can be overridden explicitly.
-- [ ] #4 The transform is applied to the sparse cloud and camera centres, and the result carries its EPSG code.
+- [ ] #1 The input contract requires a validated `SparseScene v1`; the task never mutates or reinterprets the V0 local scene in place.
+- [ ] #2 The Umeyama fit returns rotation, translation and scale plus per-image residuals, outlier reporting and an overall RMSE.
+- [ ] #3 Target CRS selection uses documented defaults and explicit overrides, with PROJ failures reported as typed errors.
+- [ ] #4 The output carries CRS, scale, transform provenance and quality metrics separately from the original local sparse scene.
 <!-- AC:END -->

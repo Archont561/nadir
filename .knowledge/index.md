@@ -13,6 +13,7 @@ domain.
 - [Project context](context.md)
 - [Architecture overview](architecture/overview.md)
 - [Language bindings](architecture/language-bindings.md)
+- [V0 strict sparse reconstruction profile](architecture/v0-strict-sparse-profile.md)
 
 ## Architecture
 
@@ -41,6 +42,7 @@ domain.
 
 ## Planning records
 
+- [ADR-012: V0 strict sparse reconstruction profile](../backlog/docs/decisions/012-v0-strict-sparse-reconstruction-profile.md)
 - [Architecture decisions](../backlog/docs/decisions/)
 - [Roadmaps](../backlog/docs/roadmaps/)
 - [Delivery plans](../backlog/docs/plans/)

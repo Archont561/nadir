@@ -11,8 +11,8 @@
 </p>
 
 <p align="center">
-  <strong>Artifact-driven photogrammetry — one Rust engine, native Python and TypeScript bindings, reproducible external tools.</strong><br/>
-  Turn overlapping aerial images into georeferenced point clouds, meshes, elevation models, and orthomosaics.
+  <strong>Artifact-driven photogrammetry — strict sparse reconstruction first, mapping products later.</strong><br/>
+  V0 is a qualified CPU-only COLMAP path from one immutable calibrated ImageSet to local <code>SparseScene v1</code>.
 </p>
 
 ---
@@ -20,10 +20,10 @@
 > [!WARNING]
 > **Nadir is an early scaffold, not a working photogrammetry processor yet.** The workspace,
 > CLI shell, engine discovery, versioned FFI transport, PyO3 extension, and N-API addon compile
-> and have contract tests. `nadir process` deliberately exits with an error until the V0.1
-> execution pipeline can produce real artifacts.
+> and have contract tests. `nadir process` deliberately exits with an error until the ADR-012
+> V0.1 profile can produce a validated local `SparseScene v1`.
 
-## 🛰️ Pipeline Visualization
+## 🛰️ V0 Pipeline Boundary
 
 ```text
                                       native interfaces
@@ -33,25 +33,22 @@
        Python/PyO3 ─┤  versioned JSON transport → dispatcher  ├──► Rust core
        TypeScript ──┤                                          │       │
        N-API         │                                          │       ▼
-                    └──────────────────────────────────────────┘  artifact DAG
+                    └──────────────────────────────────────────┘  fixed V0 profile
                                                                        │
-           ┌────────────┬────────────────┬──────────┬─────────┬─────────┴───────┐
-           ▼            ▼                ▼          ▼         ▼                 ▼
-        ingest       features/SfM   georeference   dense    surfaces         products
-         Rust           COLMAP       PROJ + Rust   OpenMVS  PDAL + Rust      GDAL + Rust
-           │            │                │          │         │                 │
-           └────────────┴────────────────┴──────────┴─────────┴─────────────────┘
-                                      immutable artifacts
+                                                                       ▼
+                 immutable calibrated ImageSet snapshot ──► CPU COLMAP sparse path
+                                                                       │
+                                                                       ▼
+                  verified stage manifests/cache ──► local SparseScene v1
 ```
 
-Rust owns orchestration, artifact identity, and domain rules. Focused external engines own the
-specialized reconstruction and geospatial work. Each stage is intended to be independently
-cacheable, replaceable, retryable, and schedulable rather than hidden inside one monolithic
-subprocess.
+Rust owns orchestration, artifact identity, and domain rules. For V0, the only qualified engine
+path is CPU-only COLMAP feature extraction, exhaustive matching, and sparse reconstruction. Each
+stage is cached through an invocation key that is distinct from the verified output-tree digest.
 
-The native SDKs do not reimplement the pipeline. Both pass one versioned JSON request through
-`nadir-protocol` and `nadir-engine`, so adding an operation changes one Rust dispatcher instead
-of creating a separate domain implementation for every language.
+Georeferencing, OpenMVS dense reconstruction, PDAL/GDAL surfaces, orthomosaics, HTTP workers,
+GPU execution, and configurable recipes are post-V0 work. The native SDK probes do not
+reimplement the pipeline; they pass versioned JSON through `nadir-protocol` and `nadir-engine`.
 
 ---
 
@@ -60,10 +57,10 @@ of creating a separate domain implementation for every language.
 | Icon | Principle | What it means |
 |------|-----------|---------------|
 | 📦 | **Artifacts, not jobs** | Tasks transform immutable artifacts; provenance is part of every result |
-| ⚡ | **Content-addressed work** | Inputs, normalized parameters, and engine versions determine cache identity |
-| 🧩 | **Step-scoped engines** | COLMAP, OpenMVS, GDAL, PROJ, and PDAL can be replaced or retried stage by stage |
+| ⚡ | **Verified cache reuse** | Invocation keys identify requests; output-tree digests verify bytes before reuse |
+| 🧩 | **Step-scoped engines** | V0 qualifies one CPU-only COLMAP sparse path; later engines remain stage-scoped |
 | 🦀 | **One Rust implementation** | CLI, Python, and TypeScript reach the same domain model and dispatcher |
-| 🕸️ | **Declarative DAG** | Dependency ordering, incremental rebuilds, and resume follow from the graph |
+| 🕸️ | **Profile before recipes** | V0 is a fixed sparse profile; declarative DAG recipes resume after that boundary is proven |
 | 🔒 | **Reproducible and portable** | Pixi locks the complete toolchain; pixi-sandbox can transport it to an airlock |
 
 The project follows a build-system metaphor rather than a job-queue metaphor: every node is an
@@ -114,9 +111,9 @@ offline bundle is separately reviewed in `pixi-sandbox.toml`.
 |---------|--------|-------|
 | `linux-64` | ✅ locked and tested | The default development environment and sandbox bundle target Linux x86-64 |
 | macOS / Windows | ⏳ not declared | No lockfile environment or CI proof is currently published for these platforms |
-| COLMAP | ✅ locked | CPU build from conda-forge; CUDA is intentionally excluded from the default environment |
-| GDAL / PROJ / PDAL / OpenCV | ✅ locked | Available to adapters through the default Pixi environment |
-| OpenMVS | ⚠️ source build only | No `linux-64` conda-forge package exists; use `pixi run build-openmvs` |
+| COLMAP | ✅ locked | The only V0 execution engine, qualified as CPU-only through Pixi/OCI profiles |
+| GDAL / PROJ / PDAL / OpenCV | ✅ locked for later work | Present in the development environment but not part of V0 acceptance |
+| OpenMVS | ⏭️ post-V0 source build only | No `linux-64` conda-forge package exists; use `pixi run build-openmvs` only for later dense work |
 
 The CLI reports what is actually available on the current machine:
 
@@ -129,9 +126,9 @@ pixi run --locked cargo run -- engines
 ## 📖 CLI
 
 ```text
-nadir process <IMAGES> [--pipeline <FILE>]   process a dataset (not implemented yet)
+nadir process <IMAGES> [--pipeline <FILE>]   scaffold today; V0 target emits SparseScene v1
 nadir inspect <IMAGES>                      count supported image files in a directory
-nadir plan [--pipeline <FILE>]               print the planned stage ordering
+nadir plan [--pipeline <FILE>]               print the current scaffold stage ordering
 nadir engines                                report external engines and versions
 nadir crates                                 list workspace crates and their stage ownership
 ```
@@ -150,7 +147,7 @@ pixi run --locked cargo run -- process ./images
 ```
 
 The explicit `process` failure is part of the current contract: a scaffold that exits zero
-without producing a point cloud or raster would be more dangerous than one that says it is not
+without producing `SparseScene v1` would be more dangerous than one that says it is not
 implemented.
 
 ---
@@ -204,10 +201,10 @@ boundary rules.
 | `crates/pipeline` | Declarative pipeline DAG |
 | `crates/executor` | Stage execution, scheduling, and resume |
 | `crates/dataset` | Image ingest, EXIF, GPS, and camera models |
-| `crates/reconstruction` | COLMAP/OpenMVS reconstruction stages |
-| `crates/geometry` | CRS transforms, georeferencing, and GCPs |
-| `crates/surface` | Point-cloud filtering, DSMs, and DTMs |
-| `crates/cartography` | Orthorectification, mosaicking, and tiling |
+| `crates/reconstruction` | V0 COLMAP sparse stages; OpenMVS is post-V0 |
+| `crates/geometry` | Post-V0 CRS transforms, georeferencing, and GCPs |
+| `crates/surface` | Post-V0 point-cloud filtering, DSMs, and DTMs |
+| `crates/cartography` | Post-V0 orthorectification, mosaicking, and tiling |
 | `crates/math` | Native numerical primitives |
 | `crates/cli` | `nadir` command sources; its manifest is the repository root |
 | `python/nadir` | Native Python SDK built with Maturin |
@@ -347,13 +344,14 @@ pixi-sandbox doctor --branch-location .sandbox-out --verify
 | CLI parsing, engine report, inspection, and planning probes | ✅ implemented |
 | Shared protocol and Rust dispatcher | ✅ implemented and contract-tested |
 | PyO3 and N-API native boundaries | ✅ implemented and contract-tested |
-| Content-addressed artifact store | 🚧 next implementation phase |
-| Real DAG execution and resume | ⏳ planned for V0.1 |
-| COLMAP → georeference → DSM → orthomosaic | ⏳ planned for V0.1 |
-| HTTP worker and distributed execution | ⏳ later milestones |
+| Invocation-key artifact store and verified manifests | 🚧 next implementation phase |
+| Immutable bounded ImageSet snapshots | ⏳ planned for V0.1 |
+| CPU-only COLMAP → canonical local SparseScene v1 | ⏳ planned for V0.1 |
+| Georeferencing, dense reconstruction, mapping products | ⏭️ V1.0+ |
+| HTTP worker and distributed execution | ⏭️ V2.0+ |
 
 The V0.1 exit demo is intentionally concrete: `nadir process ./images` must write a
-georeferenced cloud-optimized GeoTIFF instead of exiting with status 1. Follow the
+canonical local `SparseScene v1` and cache evidence instead of exiting with status 1. Follow the
 [V0.1 roadmap](backlog/docs/roadmaps/v0-mvp.md) or inspect live work with:
 
 ```bash
