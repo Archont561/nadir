@@ -136,6 +136,7 @@ napi-derive = "3.6"
 napi-build = "2.6"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+rstest-bdd = "0.3"
 
 # ── planned for V0.1, not yet depended on ──────────────────────────────────
 # tokio = { version = "1", features = ["full"] }

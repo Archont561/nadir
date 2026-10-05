@@ -44,6 +44,7 @@
     "build:native:release": "turbo run build:native:release --filter=@nadir/sdk"
   },
   "devDependencies": {
+    "@aboviq/bun-test-cucumber": "^0.2",
     "@biomejs/biome": "1.9.4",
     "backlog.md": "^1.53.0",
     "skills": "^1.7.0",
